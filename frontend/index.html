@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT资产全生命周期管理系统</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus@2.9.1/dist/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@element-plus/icons-vue@2.3.1/dist/index.css">
+    <style>
+        :root { --primary: #0052D9; --primary-light: #E8F0FE; --danger: #E34D59; --warning: #ED7B2F; --success: #2BA471; --bg: #F3F5F8; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg); }
+        #app { min-height: 100vh; }
+
+        .app-header { background: linear-gradient(135deg, #0052D9 0%, #003DA6 100%); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0,82,217,0.3); }
+        .app-header h1 { font-size: 18px; font-weight: 600; letter-spacing: 1px; }
+        .app-header .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; opacity: 0.9; }
+
+        .app-body { margin-top: 56px; display: flex; min-height: calc(100vh - 56px); }
+
+        .sidebar { width: 200px; background: #fff; border-right: 1px solid #E7E8EB; position: fixed; top: 56px; bottom: 0; overflow-y: auto; }
+        .sidebar .menu-group { padding: 12px 0; }
+        .sidebar .menu-group-title { padding: 8px 20px; font-size: 11px; color: #8C8E96; text-transform: uppercase; letter-spacing: 1px; }
+        .sidebar .menu-item { display: flex; align-items: center; padding: 10px 20px; cursor: pointer; color: #4B5160; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
+        .sidebar .menu-item:hover { background: var(--primary-light); color: var(--primary); }
+        .sidebar .menu-item.active { background: var(--primary-light); color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
+        .sidebar .menu-item .icon { margin-right: 10px; font-size: 16px; width: 20px; text-align: center; }
+
+        .main-content { margin-left: 200px; flex: 1; padding: 20px 24px; }
+
+        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+        .stat-card { background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #E7E8EB; }
+        .stat-card .label { font-size: 13px; color: #8C8E96; margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #1D2129; }
+        .stat-card .value.danger { color: var(--danger); }
+        .stat-card .value.warning { color: var(--warning); }
+        .stat-card .value.success { color: var(--success); }
+        .stat-card .sub { font-size: 12px; color: #8C8E96; margin-top: 4px; }
+
+        .page-card { background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #E7E8EB; margin-bottom: 20px; }
+        .page-card .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .page-card .card-title { font-size: 16px; font-weight: 600; color: #1D2129; }
+
+        .filter-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+
+        .stage-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+        .stage-规划 { background: #E8F0FE; color: #0052D9; }
+        .stage-在途 { background: #FFF7E8; color: #ED7B2F; }
+        .stage-上架 { background: #E8F8F0; color: #2BA471; }
+        .stage-运行 { background: #E8F8F0; color: #008858; }
+        .stage-维修 { background: #FDE8E8; color: #E34D59; }
+        .stage-待报废 { background: #F3E8FF; color: #8B5CF6; }
+        .stage-已报废 { background: #F0F0F0; color: #8C8E96; }
+
+        .warranty-alert-expired { color: var(--danger); font-weight: 600; }
+        .warranty-alert-expiring_soon { color: var(--warning); font-weight: 600; }
+
+        .validation-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #F0F1F3; }
+        .validation-item:last-child { border-bottom: none; }
+        .validation-item .check-name { font-weight: 500; color: #1D2129; }
+        .validation-item .check-desc { font-size: 12px; color: #8C8E96; margin-top: 2px; }
+        .validation-item .check-count { font-size: 20px; font-weight: 700; min-width: 50px; text-align: right; }
+        .validation-item .check-count.error { color: var(--danger); }
+        .validation-item .check-count.warning { color: var(--warning); }
+        .validation-item .check-count.ok { color: var(--success); }
+
+        .timeline-item { display: flex; padding: 12px 0; border-bottom: 1px solid #F0F1F3; }
+        .timeline-item .tl-stage { width: 80px; flex-shrink: 0; }
+        .timeline-item .tl-stage span { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; background: var(--primary-light); color: var(--primary); }
+        .timeline-item .tl-date { width: 110px; flex-shrink: 0; font-size: 13px; color: #8C8E96; }
+        .timeline-item .tl-detail { font-size: 13px; color: #4B5160; }
+
+        .el-table .cell { font-size: 13px; }
+        .el-button--primary { --el-button-bg-color: #0052D9; --el-button-border-color: #0052D9; }
+        .el-button--primary:hover { --el-button-hover-bg-color: #0061F0; --el-button-hover-border-color: #0061F0; }
+
+        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0052D9 0%, #003DA6 100%); }
+        .login-card { width: 400px; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .login-header { text-align: center; margin-bottom: 32px; }
+        .login-header .login-logo { font-size: 48px; margin-bottom: 12px; }
+        .login-header h2 { color: #1D2129; font-size: 22px; margin-bottom: 4px; }
+        .login-header p { color: #8C8E96; font-size: 14px; }
+        .login-form .el-form-item { margin-bottom: 20px; }
+        .login-tip { text-align: center; font-size: 12px; color: #C9CDD4; margin-top: 16px; }
+
+        .user-info { display: flex; align-items: center; cursor: pointer; color: #fff; }
+
+        .perm-group { margin-bottom: 16px; }
+        .perm-group-title { font-weight: 600; font-size: 14px; color: #1D2129; margin-bottom: 8px; padding-left: 4px; }
+        .perm-items { display: flex; flex-wrap: wrap; gap: 8px; }
+        .role-tag { margin-right: 4px; }
+
+        @media (max-width: 1200px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- ========== 登录页面 ========== -->
+    <div v-if="!loggedIn" class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">🖥️</div>
+                <h2>IT资产全生命周期管理系统</h2>
+                <p>长乐东南数据中心</p>
+            </div>
+            <el-form :model="loginForm" @submit.prevent="doLogin" class="login-form">
+                <el-form-item>
+                    <el-input v-model="loginForm.username" placeholder="用户名" prefix-icon="User" size="large" @keyup.enter="doLogin"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-input v-model="loginForm.password" type="password" placeholder="密码" prefix-icon="Lock" size="large" show-password @keyup.enter="doLogin"></el-input>
+                </el-form-item>
+                <el-button type="primary" size="large" style="width:100%;margin-top:8px;" :loading="loginLoading" @click="doLogin">登 录</el-button>
+            </el-form>
+            <div class="login-tip">默认管理员账号: admin / admin123</div>
+        </div>
+    </div>
+
+    <!-- ========== 主界面 ========== -->
+    <template v-if="loggedIn">
+    <!-- 顶部导航 -->
+    <header class="app-header">
+        <h1>IT资产全生命周期管理系统</h1>
+        <div class="header-right">
+            <span>长乐东南数据中心</span>
+            <span>{{ currentTime }}</span>
+            <el-dropdown @command="onUserMenu">
+                <span class="user-info">
+                    <el-avatar :size="28" style="background:#fff;color:#0052D9;font-weight:600;">{{ (currentUser.real_name||currentUser.username||'')[0] }}</el-avatar>
+                    <span style="margin-left:6px;">{{ currentUser.real_name || currentUser.username }}</span>
+                </span>
+                <template #dropdown>
+                    <el-dropdown-menu>
+                        <el-dropdown-item command="changePwd">修改密码</el-dropdown-item>
+                        <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+                    </el-dropdown-menu>
+                </template>
+            </el-dropdown>
+        </div>
+    </header>
+
+    <div class="app-body">
+        <!-- 左侧菜单 -->
+        <nav class="sidebar">
+            <div class="menu-group">
+                <div class="menu-group-title">概览</div>
+                <div class="menu-item" :class="{active: currentTab==='dashboard'}" @click="currentTab='dashboard'">
+                    <span class="icon">📊</span>数据总览
+                </div>
+                <div class="menu-item" :class="{active: currentTab==='validation'}" @click="currentTab='validation'">
+                    <span class="icon">🔍</span>校验仪表盘
+                </div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">数据交换</div>
+                <div class="menu-item" :class="{active: currentTab==='importExport'}" @click="currentTab='importExport'">
+                    <span class="icon">📤</span>导入导出
+                </div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">报表统计</div>
+                <div class="menu-item" :class="{active: currentTab==='reports'}" @click="currentTab='reports'">
+                    <span class="icon">📈</span>报表统计
+                </div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">资产管理</div>
+                <div class="menu-item" :class="{active: currentTab==='assets'}" @click="currentTab='assets'">
+                    <span class="icon">🖥️</span>资产台账
+                </div>
+                <div class="menu-item" :class="{active: currentTab==='procurement'}" @click="currentTab='procurement'">
+                    <span class="icon">📦</span>采购入库
+                </div>
+                <div class="menu-item" :class="{active: currentTab==='changes'}" @click="currentTab='changes'">
+                    <span class="icon">🔄</span>变更迁移
+                </div>
+                <div class="menu-item" :class="{active: currentTab==='faults'}" @click="currentTab='faults'">
+                    <span class="icon">⚠️</span>故障维修
+                </div>
+                <div class="menu-item" :class="{active: currentTab==='warranties'}" @click="currentTab='warranties'">
+                    <span class="icon">🛡️</span>维保续保
+                </div>
+                <div class="menu-item" :class="{active: currentTab==='retirements'}" @click="currentTab='retirements'">
+                    <span class="icon">🗑️</span>退役报废
+                </div>
+            </div>
+            <div class="menu-group" v-if="hasAnyPerm('users:view','roles:view')">
+                <div class="menu-group-title">系统管理</div>
+                <div class="menu-item" v-if="hasPerm('users:view')" :class="{active: currentTab==='users'}" @click="currentTab='users'">
+                    <span class="icon">👥</span>用户管理
+                </div>
+                <div class="menu-item" v-if="hasPerm('roles:view')" :class="{active: currentTab==='roles'}" @click="currentTab='roles'">
+                    <span class="icon">🔑</span>角色管理
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- ========== 数据总览 ========== -->
+            <template v-if="currentTab==='dashboard'">
+                <div class="stat-cards">
+                    <div class="stat-card">
+                        <div class="label">资产总数</div>
+                        <div class="value">{{ stats.total_assets || 0 }}</div>
+                        <div class="sub">全生命周期设备</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">运行中</div>
+                        <div class="value success">{{ stats.by_stage?.['运行'] || 0 }}</div>
+                        <div class="sub">正常运行的设备</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">维保过期(裸跑)</div>
+                        <div class="value danger">{{ stats.warranty_expired || 0 }}</div>
+                        <div class="sub">维保已过期未续保</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">P1/P2未恢复</div>
+                        <div class="value danger">{{ stats.p1_p2_unresolved || 0 }}</div>
+                        <div class="sub">紧急/严重故障待处理</div>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div class="page-card">
+                        <div class="card-title" style="margin-bottom:16px;">按阶段分布</div>
+                        <div v-for="(count, stage) in stats.by_stage" :key="stage" style="display:flex;align-items:center;margin-bottom:10px;">
+                            <span style="width:70px;font-size:13px;color:#4B5160;">{{ stage }}</span>
+                            <div style="flex:1;height:24px;background:#F3F5F8;border-radius:4px;overflow:hidden;">
+                                <div :style="{width: Math.max(2, (count/stats.total_assets)*100) + '%', height:'100%', borderRadius:'4px', background: stageColor(stage)}"></div>
+                            </div>
+                            <span style="width:40px;text-align:right;font-size:14px;font-weight:600;color:#1D2129;">{{ count }}</span>
+                        </div>
+                    </div>
+                    <div class="page-card">
+                        <div class="card-title" style="margin-bottom:16px;">按分类分布</div>
+                        <div v-for="(count, cat) in stats.by_category" :key="cat" style="display:flex;align-items:center;margin-bottom:10px;">
+                            <span style="width:80px;font-size:13px;color:#4B5160;">{{ cat }}</span>
+                            <div style="flex:1;height:24px;background:#F3F5F8;border-radius:4px;overflow:hidden;">
+                                <div :style="{width: Math.max(2, (count/stats.total_assets)*100) + '%', height:'100%', borderRadius:'4px', background:'#0052D9'}"></div>
+                            </div>
+                            <span style="width:40px;text-align:right;font-size:14px;font-weight:600;color:#1D2129;">{{ count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 校验仪表盘 ========== -->
+            <template v-if="currentTab==='validation'">
+                <div class="stat-cards" style="grid-template-columns:repeat(3,1fr);">
+                    <div class="stat-card">
+                        <div class="label">资产总数</div>
+                        <div class="value">{{ validation.total_assets || 0 }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">异常项(错误)</div>
+                        <div class="value danger">{{ validation.total_errors || 0 }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">告警项(警告)</div>
+                        <div class="value warning">{{ validation.total_warnings || 0 }}</div>
+                    </div>
+                </div>
+                <div class="page-card">
+                    <div class="card-header">
+                        <div class="card-title">数据质量检查（13项自动校验）</div>
+                        <el-button type="primary" size="small" @click="loadValidation">刷新校验</el-button>
+                    </div>
+                    <div v-for="check in validation.checks" :key="check.check_name" class="validation-item">
+                        <div>
+                            <div class="check-name">{{ check.check_name }}</div>
+                            <div class="check-desc">{{ check.description }}</div>
+                            <div v-if="check.count > 0 && check.details.length" style="margin-top:6px;">
+                                <div v-for="d in check.details" :key="d" style="font-size:12px;color:#8C8E96;padding:2px 0;">{{ d }}</div>
+                            </div>
+                        </div>
+                        <div class="check-count" :class="check.count===0?'ok':check.severity">{{ check.count }}</div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 资产台账 ========== -->
+            <template v-if="currentTab==='assets'">
+                <div class="page-card">
+                    <div class="card-header">
+                        <div class="card-title">资产台账主索引</div>
+                        <el-button type="primary" @click="openAssetForm(null)">新增资产</el-button>
+                    </div>
+                    <div class="filter-bar">
+                        <el-input v-model="assetFilter.search" placeholder="搜索编号/品牌/型号/SN/位置" clearable style="width:260px;" @clear="loadAssets" @keyup.enter="loadAssets"></el-input>
+                        <el-select v-model="assetFilter.category" placeholder="资产分类" clearable style="width:140px;" @change="loadAssets">
+                            <el-option v-for="c in dropdowns.categories" :key="c" :label="c" :value="c"></el-option>
+                        </el-select>
+                        <el-select v-model="assetFilter.stage" placeholder="生命周期阶段" clearable style="width:140px;" @change="loadAssets">
+                            <el-option v-for="s in dropdowns.lifecycle_stages" :key="s" :label="s" :value="s"></el-option>
+                        </el-select>
+                        <el-select v-model="assetFilter.warranty" placeholder="维保状态" clearable style="width:120px;" @change="loadAssets">
+                            <el-option v-for="w in dropdowns.warranty_statuses" :key="w" :label="w" :value="w"></el-option>
+                        </el-select>
+                        <el-button @click="loadAssets">查询</el-button>
+                    </div>
+                    <el-table :data="assetList" stripe border style="width:100%;" @row-click="showAssetDetail" highlight-current-row>
+                        <el-table-column prop="asset_code" label="资产编号" width="150" fixed></el-table-column>
+                        <el-table-column prop="asset_category" label="分类" width="90"></el-table-column>
+                        <el-table-column prop="brand" label="品牌" width="90"></el-table-column>
+                        <el-table-column prop="model" label="型号" width="140"></el-table-column>
+                        <el-table-column prop="sn" label="SN号" width="140"></el-table-column>
+                        <el-table-column prop="location" label="位置" width="120"></el-table-column>
+                        <el-table-column label="阶段" width="90">
+                            <template #default="scope">
+                                <span class="stage-tag" :class="'stage-'+scope.row.lifecycle_stage">{{ scope.row.lifecycle_stage }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="responsible_person" label="责任人" width="80"></el-table-column>
+                        <el-table-column label="维保" width="100">
+                            <template #default="scope">
+                                <span :class="'warranty-alert-'+scope.row.warranty_alert">{{ scope.row.warranty_status || '-' }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="ip_address" label="IP" width="130"></el-table-column>
+                        <el-table-column label="操作" width="140" fixed="right">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click.stop="openAssetForm(scope.row)">编辑</el-button>
+                                <el-button link type="danger" size="small" @click.stop="deleteAsset(scope.row)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                        <el-pagination v-model:current-page="assetPage" :page-size="20" :total="assetTotal" layout="total, prev, pager, next" @current-change="loadAssets"></el-pagination>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 采购入库 ========== -->
+            <template v-if="currentTab==='procurement'">
+                <div class="page-card">
+                    <div class="card-header">
+                        <div class="card-title">采购入库记录</div>
+                        <el-button type="primary" @click="openForm('procurement', null)">新增记录</el-button>
+                    </div>
+                    <div class="filter-bar">
+                        <el-input v-model="procFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadProcurements"></el-input>
+                        <el-button @click="loadProcurements">查询</el-button>
+                    </div>
+                    <el-table :data="procList" stripe border style="width:100%;">
+                        <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
+                        <el-table-column prop="purchase_order" label="采购单号" width="130"></el-table-column>
+                        <el-table-column prop="contract_no" label="合同号" width="130"></el-table-column>
+                        <el-table-column prop="supplier" label="供应商" width="120"></el-table-column>
+                        <el-table-column prop="quantity" label="数量" width="70"></el-table-column>
+                        <el-table-column prop="unit_price" label="单价" width="90"></el-table-column>
+                        <el-table-column prop="total_price" label="总价" width="90"></el-table-column>
+                        <el-table-column prop="arrival_date" label="到货日期" width="110"></el-table-column>
+                        <el-table-column prop="inspector" label="验收人" width="80"></el-table-column>
+                        <el-table-column prop="inspection_result" label="验收结果" width="90"></el-table-column>
+                        <el-table-column prop="install_date" label="上架日期" width="110"></el-table-column>
+                        <el-table-column label="操作" width="140" fixed="right">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openForm('procurement', scope.row)">编辑</el-button>
+                                <el-button link type="danger" size="small" @click="deleteRecord('procurements', scope.row.id, loadProcurements)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                        <el-pagination v-model:current-page="procPage" :page-size="20" :total="procTotal" layout="total, prev, pager, next" @current-change="loadProcurements"></el-pagination>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 变更迁移 ========== -->
+            <template v-if="currentTab==='changes'">
+                <div class="page-card">
+                    <div class="card-header">
+                        <div class="card-title">变更迁移记录</div>
+                        <el-button type="primary" @click="openForm('change', null)">新增记录</el-button>
+                    </div>
+                    <div class="filter-bar">
+                        <el-input v-model="changeFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadChanges"></el-input>
+                        <el-button @click="loadChanges">查询</el-button>
+                    </div>
+                    <el-table :data="changeList" stripe border style="width:100%;">
+                        <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
+                        <el-table-column prop="change_type" label="变更类型" width="100"></el-table-column>
+                        <el-table-column prop="old_location" label="原位置" width="110"></el-table-column>
+                        <el-table-column prop="new_location" label="新位置" width="110"></el-table-column>
+                        <el-table-column prop="change_reason" label="变更原因" min-width="150"></el-table-column>
+                        <el-table-column prop="approver" label="审批人" width="80"></el-table-column>
+                        <el-table-column prop="executor" label="执行人" width="80"></el-table-column>
+                        <el-table-column prop="execute_date" label="执行日期" width="110"></el-table-column>
+                        <el-table-column prop="completion_status" label="状态" width="80"></el-table-column>
+                        <el-table-column label="操作" width="140" fixed="right">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openForm('change', scope.row)">编辑</el-button>
+                                <el-button link type="danger" size="small" @click="deleteRecord('changes', scope.row.id, loadChanges)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                        <el-pagination v-model:current-page="changePage" :page-size="20" :total="changeTotal" layout="total, prev, pager, next" @current-change="loadChanges"></el-pagination>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 故障维修 ========== -->
+            <template v-if="currentTab==='faults'">
+                <div class="page-card">
+                    <div class="card-header">
+                        <div class="card-title">故障维修记录</div>
+                        <el-button type="primary" @click="openForm('fault', null)">新增记录</el-button>
+                    </div>
+                    <div class="filter-bar">
+                        <el-input v-model="faultFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadFaults"></el-input>
+                        <el-button @click="loadFaults">查询</el-button>
+                    </div>
+                    <el-table :data="faultList" stripe border style="width:100%;" :row-class-name="faultRowClass">
+                        <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
+                        <el-table-column label="等级" width="70">
+                            <template #default="scope">
+                                <span :style="{color: scope.row.fault_level==='P1'||scope.row.fault_level==='P2'?'#E34D59':'#4B5160', fontWeight:'600'}">{{ scope.row.fault_level }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="fault_description" label="故障现象" min-width="180"></el-table-column>
+                        <el-table-column prop="fault_date" label="故障日期" width="110"></el-table-column>
+                        <el-table-column prop="repair_person" label="维修人" width="80"></el-table-column>
+                        <el-table-column prop="handle_method" label="处理方式" width="100"></el-table-column>
+                        <el-table-column prop="root_cause" label="根因" width="100"></el-table-column>
+                        <el-table-column prop="recovery_date" label="恢复日期" width="110"></el-table-column>
+                        <el-table-column prop="downtime_hours" label="停机(h)" width="80"></el-table-column>
+                        <el-table-column label="操作" width="140" fixed="right">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openForm('fault', scope.row)">编辑</el-button>
+                                <el-button link type="danger" size="small" @click="deleteRecord('faults', scope.row.id, loadFaults)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                        <el-pagination v-model:current-page="faultPage" :page-size="20" :total="faultTotal" layout="total, prev, pager, next" @current-change="loadFaults"></el-pagination>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 维保续保 ========== -->
+            <template v-if="currentTab==='warranties'">
+                <div class="page-card">
+                    <div class="card-header">
+                        <div class="card-title">维保续保记录</div>
+                        <el-button type="primary" @click="openForm('warranty', null)">新增记录</el-button>
+                    </div>
+                    <div class="filter-bar">
+                        <el-input v-model="warrantyFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadWarranties"></el-input>
+                        <el-button @click="loadWarranties">查询</el-button>
+                    </div>
+                    <el-table :data="warrantyList" stripe border style="width:100%;">
+                        <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
+                        <el-table-column prop="contract_no" label="合同编号" width="130"></el-table-column>
+                        <el-table-column prop="coverage" label="覆盖范围" min-width="140"></el-table-column>
+                        <el-table-column prop="start_date" label="起始日" width="110"></el-table-column>
+                        <el-table-column prop="end_date" label="到期日" width="110"></el-table-column>
+                        <el-table-column prop="renewal_decision" label="续保决策" width="100"></el-table-column>
+                        <el-table-column prop="decision_person" label="决策人" width="80"></el-table-column>
+                        <el-table-column prop="renewal_end_date" label="续保到期日" width="110"></el-table-column>
+                        <el-table-column prop="cost" label="费用" width="90"></el-table-column>
+                        <el-table-column label="操作" width="140" fixed="right">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openForm('warranty', scope.row)">编辑</el-button>
+                                <el-button link type="danger" size="small" @click="deleteRecord('warranties', scope.row.id, loadWarranties)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                        <el-pagination v-model:current-page="warrantyPage" :page-size="20" :total="warrantyTotal" layout="total, prev, pager, next" @current-change="loadWarranties"></el-pagination>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 退役报废 ========== -->
+            <template v-if="currentTab==='retirements'">
+                <div class="page-card">
+                    <div class="card-header">
+                        <div class="card-title">退役报废记录</div>
+                        <el-button type="primary" @click="openForm('retirement', null)">新增记录</el-button>
+                    </div>
+                    <div class="filter-bar">
+                        <el-input v-model="retireFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadRetirements"></el-input>
+                        <el-button @click="loadRetirements">查询</el-button>
+                    </div>
+                    <el-table :data="retireList" stripe border style="width:100%;">
+                        <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
+                        <el-table-column prop="retire_reason" label="报废原因" min-width="160"></el-table-column>
+                        <el-table-column prop="retire_category" label="报废类别" width="100"></el-table-column>
+                        <el-table-column prop="application_no" label="申请单号" width="130"></el-table-column>
+                        <el-table-column prop="approver" label="审批人" width="80"></el-table-column>
+                        <el-table-column prop="uninstall_date" label="下架日期" width="110"></el-table-column>
+                        <el-table-column label="数据清除" width="90">
+                            <template #default="scope">
+                                <span :style="{color: scope.row.data_cleared==='已清除'?'#2BA471':'#E34D59', fontWeight:600}">{{ scope.row.data_cleared || '-' }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="disposal_method" label="处置方式" width="100"></el-table-column>
+                        <el-table-column label="操作" width="140" fixed="right">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openForm('retirement', scope.row)">编辑</el-button>
+                                <el-button link type="danger" size="small" @click="deleteRecord('retirements', scope.row.id, loadRetirements)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                        <el-pagination v-model:current-page="retirePage" :page-size="20" :total="retireTotal" layout="total, prev, pager, next" @current-change="loadRetirements"></el-pagination>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 导入导出 ========== -->
+            <template v-if="currentTab==='importExport'">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <!-- 导入区 -->
+                    <div class="page-card">
+                        <div class="card-title" style="margin-bottom:16px;">批量导入</div>
+                        <div style="margin-bottom:16px;">
+                            <div style="font-size:13px;color:#4B5160;margin-bottom:8px;">选择导入表类型：</div>
+                            <el-select v-model="importType" style="width:100%;">
+                                <el-option label="资产台账" value="assets"></el-option>
+                                <el-option label="采购入库" value="procurement"></el-option>
+                                <el-option label="变更迁移" value="change"></el-option>
+                                <el-option label="故障维修" value="fault"></el-option>
+                                <el-option label="维保续保" value="warranty"></el-option>
+                                <el-option label="退役报废" value="retirement"></el-option>
+                            </el-select>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <el-button type="primary" size="small" @click="downloadTemplate">下载导入模板</el-button>
+                            <span style="font-size:12px;color:#8C8E96;margin-left:8px;">先下载模板，按格式填写后上传</span>
+                        </div>
+                        <el-upload ref="uploadRef" :auto-upload="false" :limit="1" accept=".xlsx,.xls" :on-change="onImportFileChange" :on-exceed="()=>ElMessage.warning('只能上传一个文件')">
+                            <template #trigger>
+                                <el-button type="primary">选择Excel文件</el-button>
+                            </template>
+                            <template #tip>
+                                <div style="font-size:12px;color:#8C8E96;">仅支持 .xlsx / .xls 格式</div>
+                            </template>
+                        </el-upload>
+                        <div style="margin-top:12px;">
+                            <el-button type="success" @click="doImport" :loading="importLoading">开始导入</el-button>
+                        </div>
+                        <!-- 导入结果 -->
+                        <div v-if="importResult" style="margin-top:16px;padding:12px;border:1px solid #E7E8EB;border-radius:6px;">
+                            <div style="font-weight:600;margin-bottom:8px;">导入结果</div>
+                            <div style="display:flex;gap:16px;margin-bottom:8px;">
+                                <span style="color:#2BA471;">成功: {{ importResult.success }}条</span>
+                                <span style="color:#ED7B2F;">跳过: {{ importResult.skipped || 0 }}条</span>
+                                <span style="color:#8C8E96;">总行数: {{ importResult.total_rows }}</span>
+                            </div>
+                            <div v-if="importResult.errors.length" style="font-size:12px;color:#E34D59;">
+                                <div v-for="err in importResult.errors" :key="err" style="padding:2px 0;">{{ err }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 导出区 -->
+                    <div class="page-card">
+                        <div class="card-title" style="margin-bottom:16px;">批量导出</div>
+                        <div style="margin-bottom:16px;">
+                            <div style="font-size:13px;color:#4B5160;margin-bottom:8px;">选择导出表类型：</div>
+                            <el-select v-model="exportType" style="width:100%;">
+                                <el-option label="资产台账" value="assets"></el-option>
+                                <el-option label="采购入库" value="procurement"></el-option>
+                                <el-option label="变更迁移" value="change"></el-option>
+                                <el-option label="故障维修" value="fault"></el-option>
+                                <el-option label="维保续保" value="warranty"></el-option>
+                                <el-option label="退役报废" value="retirement"></el-option>
+                            </el-select>
+                        </div>
+                        <!-- 资产台账导出筛选 -->
+                        <div v-if="exportType==='assets'" style="margin-bottom:12px;">
+                            <div style="font-size:13px;color:#4B5160;margin-bottom:8px;">筛选条件（可选）：</div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <el-select v-model="exportFilter.category" placeholder="分类" clearable style="width:120px;">
+                                    <el-option v-for="c in dropdowns.categories" :key="c" :label="c" :value="c"></el-option>
+                                </el-select>
+                                <el-select v-model="exportFilter.stage" placeholder="阶段" clearable style="width:120px;">
+                                    <el-option v-for="s in dropdowns.lifecycle_stages" :key="s" :label="s" :value="s"></el-option>
+                                </el-select>
+                                <el-select v-model="exportFilter.warranty" placeholder="维保状态" clearable style="width:120px;">
+                                    <el-option v-for="w in dropdowns.warranty_statuses" :key="w" :label="w" :value="w"></el-option>
+                                </el-select>
+                                <el-input v-model="exportFilter.search" placeholder="关键词搜索" clearable style="width:160px;"></el-input>
+                            </div>
+                        </div>
+                        <el-button type="primary" @click="doExport" :loading="exportLoading">导出Excel文件</el-button>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 报表统计 ========== -->
+            <template v-if="currentTab==='reports'">
+                <div class="stat-cards">
+                    <div class="stat-card">
+                        <div class="label">资产总数</div>
+                        <div class="value">{{ comprehensiveReport.total_assets || 0 }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">故障总数</div>
+                        <div class="value" :style="{color: '#E34D59'}">{{ comprehensiveReport.fault_summary?.total || 0 }}</div>
+                        <div class="sub">未恢复 {{ comprehensiveReport.fault_summary?.unresolved || 0 }}条</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">维保过期</div>
+                        <div class="value danger">{{ comprehensiveReport.warranty_expired_count || 0 }}</div>
+                        <div class="sub">即将到期 {{ comprehensiveReport.warranty_expiring_count || 0 }}台</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">采购总额</div>
+                        <div class="value" style="color:#0052D9;">¥{{ formatMoney(comprehensiveReport.total_purchase_cost || 0) }}</div>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <!-- 分类分布 -->
+                    <div class="page-card">
+                        <div class="card-title" style="margin-bottom:16px;">按分类分布</div>
+                        <div v-for="(count, cat) in comprehensiveReport.by_category" :key="cat" style="display:flex;align-items:center;margin-bottom:8px;">
+                            <span style="width:80px;font-size:13px;color:#4B5160;">{{ cat }}</span>
+                            <div style="flex:1;height:20px;background:#F3F5F8;border-radius:4px;overflow:hidden;">
+                                <div :style="{width: Math.max(2, (count/(comprehensiveReport.total_assets||1))*100) + '%', height:'100%', borderRadius:'4px', background:'#0052D9'}"></div>
+                            </div>
+                            <span style="width:40px;text-align:right;font-size:14px;font-weight:600;">{{ count }}</span>
+                        </div>
+                    </div>
+
+                    <!-- 资产年龄分布 -->
+                    <div class="page-card">
+                        <div class="card-title" style="margin-bottom:16px;">资产年龄分布</div>
+                        <div v-for="(count, bucket) in comprehensiveReport.age_distribution" :key="bucket" style="display:flex;align-items:center;margin-bottom:8px;">
+                            <span style="width:70px;font-size:13px;color:#4B5160;">{{ bucket }}</span>
+                            <div style="flex:1;height:20px;background:#F3F5F8;border-radius:4px;overflow:hidden;">
+                                <div :style="{width: Math.max(2, (count/(comprehensiveReport.total_assets||1))*100) + '%', height:'100%', borderRadius:'4px', background: ageColor(bucket)}"></div>
+                            </div>
+                            <span style="width:40px;text-align:right;font-size:14px;font-weight:600;">{{ count }}</span>
+                        </div>
+                    </div>
+
+                    <!-- 故障分析 -->
+                    <div class="page-card">
+                        <div class="card-header">
+                            <div class="card-title">故障等级分布</div>
+                            <div style="font-size:12px;color:#8C8E96;">平均停机 {{ comprehensiveReport.fault_summary?.avg_downtime_hours || 0 }}h</div>
+                        </div>
+                        <div v-for="(count, level) in comprehensiveReport.fault_summary?.by_level" :key="level" style="display:flex;align-items:center;margin-bottom:8px;">
+                            <span style="width:50px;font-size:14px;font-weight:600;" :style="{color: level==='P1'||level==='P2'?'#E34D59':'#4B5160'}">{{ level }}</span>
+                            <div style="flex:1;height:20px;background:#F3F5F8;border-radius:4px;overflow:hidden;">
+                                <div :style="{width: Math.max(2, (count/(comprehensiveReport.fault_summary?.total||1))*100) + '%', height:'100%', borderRadius:'4px', background: level==='P1'||level==='P2'?'#E34D59':'#ED7B2F'}"></div>
+                            </div>
+                            <span style="width:40px;text-align:right;font-size:14px;font-weight:600;">{{ count }}</span>
+                        </div>
+                        <div style="margin-top:16px;border-top:1px solid #E7E8EB;padding-top:12px;">
+                            <div class="card-title" style="font-size:14px;margin-bottom:8px;">根因分类</div>
+                            <div v-for="(count, cause) in comprehensiveReport.fault_summary?.by_root_cause" :key="cause" style="display:flex;align-items:center;margin-bottom:6px;">
+                                <span style="width:90px;font-size:12px;color:#4B5160;">{{ cause }}</span>
+                                <div style="flex:1;height:16px;background:#F3F5F8;border-radius:4px;overflow:hidden;">
+                                    <div :style="{width: Math.max(2, (count/(comprehensiveReport.fault_summary?.total||1))*100) + '%', height:'100%', borderRadius:'4px', background:'#0052D9'}"></div>
+                                </div>
+                                <span style="width:30px;text-align:right;font-size:12px;font-weight:600;">{{ count }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 变更统计 -->
+                    <div class="page-card">
+                        <div class="card-header">
+                            <div class="card-title">变更类型分布</div>
+                            <div style="font-size:12px;color:#8C8E96;">完成率 {{ comprehensiveReport.change_summary?.completion_rate || 0 }}%</div>
+                        </div>
+                        <div v-for="(count, type) in comprehensiveReport.change_summary?.by_type" :key="type" style="display:flex;align-items:center;margin-bottom:8px;">
+                            <span style="width:80px;font-size:13px;color:#4B5160;">{{ type }}</span>
+                            <div style="flex:1;height:20px;background:#F3F5F8;border-radius:4px;overflow:hidden;">
+                                <div :style="{width: Math.max(2, (count/(comprehensiveReport.change_summary?.total||1))*100) + '%', height:'100%', borderRadius:'4px', background:'#2BA471'}"></div>
+                            </div>
+                            <span style="width:40px;text-align:right;font-size:14px;font-weight:600;">{{ count }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 维保到期明细 -->
+                <div class="page-card" style="margin-top:16px;">
+                    <div class="card-header">
+                        <div class="card-title">维保到期明细</div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span style="font-size:12px;color:#8C8E96;">查看范围：</span>
+                            <el-select v-model="warrantyReportDays" style="width:120px;" @change="loadWarrantyReport">
+                                <el-option label="30天" :value="30"></el-option>
+                                <el-option label="60天" :value="60"></el-option>
+                                <el-option label="90天" :value="90"></el-option>
+                                <el-option label="180天" :value="180"></el-option>
+                                <el-option label="365天" :value="365"></el-option>
+                            </el-select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:24px;margin-bottom:12px;">
+                        <span style="color:#E34D59;font-weight:600;">已过期 {{ warrantyReport.expired_count || 0 }} 台</span>
+                        <span style="color:#ED7B2F;font-weight:600;">即将到期 {{ warrantyReport.expiring_count || 0 }} 台</span>
+                    </div>
+                    <el-table :data="warrantyReport.expired" stripe border style="width:100%;margin-bottom:16px;" v-if="warrantyReport.expired?.length">
+                        <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
+                        <el-table-column prop="category" label="分类" width="90"></el-table-column>
+                        <el-table-column prop="brand" label="品牌" width="80"></el-table-column>
+                        <el-table-column prop="model" label="型号" width="120"></el-table-column>
+                        <el-table-column prop="warranty_expire_date" label="到期日" width="110"></el-table-column>
+                        <el-table-column label="逾期天数" width="90">
+                            <template #default="scope">
+                                <span style="color:#E34D59;font-weight:600;">{{ scope.row.days_overdue }}天</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="responsible_person" label="责任人" width="80"></el-table-column>
+                    </el-table>
+                    <el-table :data="warrantyReport.expiring" stripe border style="width:100%;" v-if="warrantyReport.expiring?.length">
+                        <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
+                        <el-table-column prop="category" label="分类" width="90"></el-table-column>
+                        <el-table-column prop="brand" label="品牌" width="80"></el-table-column>
+                        <el-table-column prop="model" label="型号" width="120"></el-table-column>
+                        <el-table-column prop="warranty_expire_date" label="到期日" width="110"></el-table-column>
+                        <el-table-column label="剩余天数" width="90">
+                            <template #default="scope">
+                                <span style="color:#ED7B2F;font-weight:600;">{{ scope.row.days_left }}天</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="responsible_person" label="责任人" width="80"></el-table-column>
+                    </el-table>
+                </div>
+
+                <!-- 故障设备排行 -->
+                <div class="page-card" style="margin-top:16px;">
+                    <div class="card-header">
+                        <div class="card-title">故障设备排行（前10）</div>
+                        <el-button type="primary" size="small" @click="loadReports">刷新数据</el-button>
+                    </div>
+                    <el-table :data="comprehensiveReport.fault_summary?.top_fault_assets || []" stripe border style="width:100%;">
+                        <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
+                        <el-table-column prop="fault_count" label="故障次数" width="100">
+                            <template #default="scope">
+                                <span :style="{color: scope.row.fault_count>=3?'#E34D59':'#4B5160', fontWeight:600}">{{ scope.row.fault_count }}</span>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </template>
+
+            <!-- ========== 用户管理 ========== -->
+            <template v-if="currentTab==='users'">
+                <div class="page-card">
+                    <div class="card-header">
+                        <div class="card-title">用户管理</div>
+                        <el-button type="primary" @click="openUserForm(null)">新增用户</el-button>
+                    </div>
+                    <div class="filter-bar">
+                        <el-input v-model="userFilter.search" placeholder="搜索用户名/姓名/部门" clearable style="width:260px;" @keyup.enter="loadUsers"></el-input>
+                        <el-select v-model="userFilter.status" placeholder="状态" clearable style="width:120px;" @change="loadUsers">
+                            <el-option label="正常" value="active"></el-option>
+                            <el-option label="禁用" value="disabled"></el-option>
+                        </el-select>
+                        <el-button @click="loadUsers">查询</el-button>
+                    </div>
+                    <el-table :data="userList" stripe border style="width:100%;">
+                        <el-table-column prop="username" label="用户名" width="120"></el-table-column>
+                        <el-table-column prop="real_name" label="姓名" width="100"></el-table-column>
+                        <el-table-column prop="department" label="部门" width="120"></el-table-column>
+                        <el-table-column prop="email" label="邮箱" width="180"></el-table-column>
+                        <el-table-column prop="phone" label="手机号" width="130"></el-table-column>
+                        <el-table-column label="角色" min-width="160">
+                            <template #default="scope">
+                                <el-tag v-for="r in scope.row.roles" :key="r.id" size="small" class="role-tag" :type="r.code==='admin'?'danger':r.code==='ops_manager'?'warning':''">{{ r.name }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="状态" width="80">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.status==='active'?'success':'danger'" size="small">{{ scope.row.status==='active'?'正常':'禁用' }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="last_login" label="最后登录" width="160">
+                            <template #default="scope">{{ scope.row.last_login ? scope.row.last_login.replace('T',' ').substring(0,19) : '-' }}</template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="200" fixed="right">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openUserForm(scope.row)">编辑</el-button>
+                                <el-button link type="warning" size="small" @click="resetUserPwd(scope.row)">重置密码</el-button>
+                                <el-button link type="danger" size="small" @click="deleteUser(scope.row)" :disabled="scope.row.username==='admin'">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                        <el-pagination v-model:current-page="userPage" :page-size="20" :total="userTotal" layout="total, prev, pager, next" @current-change="loadUsers"></el-pagination>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========== 角色管理 ========== -->
+            <template v-if="currentTab==='roles'">
+                <div class="page-card">
+                    <div class="card-header">
+                        <div class="card-title">角色管理</div>
+                        <el-button type="primary" @click="openRoleForm(null)">新增角色</el-button>
+                    </div>
+                    <el-table :data="roleList" stripe border style="width:100%;">
+                        <el-table-column prop="name" label="角色名称" width="140"></el-table-column>
+                        <el-table-column prop="code" label="角色编码" width="140"></el-table-column>
+                        <el-table-column prop="description" label="描述" min-width="200"></el-table-column>
+                        <el-table-column label="权限数" width="80">
+                            <template #default="scope">{{ scope.row.permissions.length }}</template>
+                        </el-table-column>
+                        <el-table-column prop="user_count" label="用户数" width="80"></el-table-column>
+                        <el-table-column label="类型" width="100">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.is_system?'info':''" size="small">{{ scope.row.is_system?'系统内置':'自定义' }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="140" fixed="right">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openRoleForm(scope.row)" :disabled="scope.row.code==='admin'">编辑</el-button>
+                                <el-button link type="danger" size="small" @click="deleteRole(scope.row)" :disabled="scope.row.is_system">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </template>
+        </main>
+    </div>
+
+    <!-- ========== 用户表单对话框 ========== -->
+    <el-dialog v-model="userDialogVisible" :title="userForm.id?'编辑用户':'新增用户'" width="580px" destroy-on-close>
+        <el-form :model="userForm" label-width="80px">
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="用户名" required>
+                        <el-input v-model="userForm.username" :disabled="!!userForm.id" placeholder="登录用户名"></el-input>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item :label="userForm.id?'重置密码':'密码'" :required="!userForm.id">
+                        <el-input v-model="userForm.password" type="password" show-password :placeholder="userForm.id?'留空不修改':'6位以上'"></el-input>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="姓名"><el-input v-model="userForm.real_name" placeholder="真实姓名"></el-input></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="部门"><el-input v-model="userForm.department" placeholder="所属部门"></el-input></el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="邮箱"><el-input v-model="userForm.email" placeholder="email@example.com"></el-input></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="手机号"><el-input v-model="userForm.phone" placeholder="手机号"></el-input></el-form-item>
+                </el-col>
+            </el-row>
+            <el-form-item label="状态" v-if="userForm.id">
+                <el-select v-model="userForm.status" style="width:200px;">
+                    <el-option label="正常" value="active"></el-option>
+                    <el-option label="禁用" value="disabled"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="角色">
+                <el-select v-model="userForm.role_ids" multiple placeholder="选择角色" style="width:100%;">
+                    <el-option v-for="r in allRoles" :key="r.id" :label="r.name + ' (' + r.code + ')'" :value="r.id"></el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="userDialogVisible=false">取消</el-button>
+            <el-button type="primary" @click="saveUser">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ========== 角色表单对话框 ========== -->
+    <el-dialog v-model="roleDialogVisible" :title="roleForm.id?'编辑角色':'新增角色'" width="680px" destroy-on-close>
+        <el-form :model="roleForm" label-width="80px">
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="角色名称" required><el-input v-model="roleForm.name" placeholder="如 运维工程师"></el-input></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="角色编码" required><el-input v-model="roleForm.code" :disabled="!!roleForm.id" placeholder="如 ops_engineer"></el-input></el-form-item>
+                </el-col>
+            </el-row>
+            <el-form-item label="描述"><el-input v-model="roleForm.description" placeholder="角色描述"></el-input></el-form-item>
+            <el-form-item label="权限配置">
+                <div style="width:100%;">
+                    <div v-for="group in permConfig.groups" :key="group.name" class="perm-group">
+                        <div class="perm-group-title">{{ group.name }}</div>
+                        <div class="perm-items">
+                            <el-checkbox v-for="p in group.permissions" :key="p" v-model="roleForm.permMap[p]" :label="permConfig.definitions[p] || p" :true-label="true" :false-label="false"></el-checkbox>
+                        </div>
+                    </div>
+                </div>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="roleDialogVisible=false">取消</el-button>
+            <el-button type="primary" @click="saveRole">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ========== 修改密码对话框 ========== -->
+    <el-dialog v-model="changePwdVisible" title="修改密码" width="400px">
+        <el-form :model="changePwdForm" label-width="80px">
+            <el-form-item label="原密码" required><el-input v-model="changePwdForm.old_password" type="password" show-password></el-input></el-form-item>
+            <el-form-item label="新密码" required><el-input v-model="changePwdForm.new_password" type="password" show-password placeholder="6位以上"></el-input></el-form-item>
+            <el-form-item label="确认密码" required><el-input v-model="changePwdForm.confirm_password" type="password" show-password></el-input></el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="changePwdVisible=false">取消</el-button>
+            <el-button type="primary" @click="doChangePwd">确认修改</el-button>
+        </template>
+    </el-dialog>
+    </template> <!-- end loggedIn -->
+
+    <!-- ========== 资产表单对话框 ========== -->
+    <el-dialog v-model="assetDialogVisible" :title="assetForm.id?'编辑资产':'新增资产'" width="680px" destroy-on-close>
+        <el-form :model="assetForm" label-width="90px" label-position="right">
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="资产编号" required>
+                        <el-input v-model="assetForm.asset_code" :disabled="!!assetForm.id" placeholder="如 DC-CL-SRV-001"></el-input>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="资产分类" required>
+                        <el-select v-model="assetForm.asset_category" style="width:100%;">
+                            <el-option v-for="c in dropdowns.categories" :key="c" :label="c" :value="c"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="品牌"><el-input v-model="assetForm.brand"></el-input></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="型号"><el-input v-model="assetForm.model"></el-input></el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="SN号"><el-input v-model="assetForm.sn" placeholder="序列号"></el-input></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="位置"><el-input v-model="assetForm.location" placeholder="如 A01-R03-U15"></el-input></el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="生命周期" required>
+                        <el-select v-model="assetForm.lifecycle_stage" style="width:100%;" @change="onStageChange">
+                            <el-option v-for="s in dropdowns.lifecycle_stages" :key="s" :label="s" :value="s"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="入场日期"><el-date-picker v-model="assetForm.entry_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="责任人"><el-input v-model="assetForm.responsible_person"></el-input></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="IP地址"><el-input v-model="assetForm.ip_address"></el-input></el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="维保状态">
+                        <el-select v-model="assetForm.warranty_status" style="width:100%;" clearable>
+                            <el-option v-for="w in dropdowns.warranty_statuses" :key="w" :label="w" :value="w"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="维保到期"><el-date-picker v-model="assetForm.warranty_expire_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item>
+                </el-col>
+            </el-row>
+            <el-form-item label="备注"><el-input v-model="assetForm.remarks" type="textarea" :rows="2"></el-input></el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="assetDialogVisible=false">取消</el-button>
+            <el-button type="primary" @click="saveAsset">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ========== 分表通用表单对话框 ========== -->
+    <el-dialog v-model="subDialogVisible" :title="subFormTitle" width="680px" destroy-on-close>
+        <!-- 采购入库表单 -->
+        <template v-if="subFormType==='procurement'">
+            <el-form :model="subForm" label-width="90px">
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="资产编号" required><el-input v-model="subForm.asset_code"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="采购单号"><el-input v-model="subForm.purchase_order"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="合同号"><el-input v-model="subForm.contract_no"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="供应商"><el-input v-model="subForm.supplier"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="8"><el-form-item label="数量"><el-input-number v-model="subForm.quantity" :min="1" style="width:100%;"></el-input-number></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="单价"><el-input-number v-model="subForm.unit_price" :precision="2" style="width:100%;"></el-input-number></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="总价"><el-input-number v-model="subForm.total_price" :precision="2" style="width:100%;"></el-input-number></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="8"><el-form-item label="到货日期"><el-date-picker v-model="subForm.arrival_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="验收人"><el-input v-model="subForm.inspector"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="验收结果"><el-select v-model="subForm.inspection_result" style="width:100%;" clearable><el-option v-for="r in dropdowns.inspection_results" :key="r" :label="r" :value="r"></el-option></el-select></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="上架日期"><el-date-picker v-model="subForm.install_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item>
+                <el-form-item label="备注"><el-input v-model="subForm.remarks" type="textarea" :rows="2"></el-input></el-form-item>
+            </el-form>
+        </template>
+        <!-- 变更迁移表单 -->
+        <template v-if="subFormType==='change'">
+            <el-form :model="subForm" label-width="90px">
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="资产编号" required><el-input v-model="subForm.asset_code"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="变更类型" required><el-select v-model="subForm.change_type" style="width:100%;"><el-option v-for="t in dropdowns.change_types" :key="t" :label="t" :value="t"></el-option></el-select></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="原位置"><el-input v-model="subForm.old_location"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="新位置"><el-input v-model="subForm.new_location"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="原IP"><el-input v-model="subForm.old_ip"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="新IP"><el-input v-model="subForm.new_ip"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="原责任人"><el-input v-model="subForm.old_responsible"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="新责任人"><el-input v-model="subForm.new_responsible"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="变更原因"><el-input v-model="subForm.change_reason" type="textarea" :rows="2"></el-input></el-form-item>
+                <el-row :gutter="16">
+                    <el-col :span="8"><el-form-item label="审批人"><el-input v-model="subForm.approver"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="执行人"><el-input v-model="subForm.executor"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="执行日期"><el-date-picker v-model="subForm.execute_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="完成状态"><el-select v-model="subForm.completion_status" style="width:200px;"><el-option v-for="s in dropdowns.completion_statuses" :key="s" :label="s" :value="s"></el-option></el-select></el-form-item>
+                <el-form-item label="备注"><el-input v-model="subForm.remarks" type="textarea" :rows="2"></el-input></el-form-item>
+            </el-form>
+        </template>
+        <!-- 故障维修表单 -->
+        <template v-if="subFormType==='fault'">
+            <el-form :model="subForm" label-width="90px">
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="资产编号" required><el-input v-model="subForm.asset_code"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="故障等级" required><el-select v-model="subForm.fault_level" style="width:100%;"><el-option v-for="l in dropdowns.fault_levels" :key="l" :label="l" :value="l"></el-option></el-select></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="故障现象"><el-input v-model="subForm.fault_description" type="textarea" :rows="2"></el-input></el-form-item>
+                <el-row :gutter="16">
+                    <el-col :span="8"><el-form-item label="故障日期"><el-date-picker v-model="subForm.fault_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="维修人"><el-input v-model="subForm.repair_person"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="处理方式"><el-select v-model="subForm.handle_method" style="width:100%;" clearable><el-option v-for="m in dropdowns.handle_methods" :key="m" :label="m" :value="m"></el-option></el-select></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="根因分类"><el-select v-model="subForm.root_cause" style="width:100%;" clearable><el-option v-for="r in dropdowns.root_causes" :key="r" :label="r" :value="r"></el-option></el-select></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="配件更换"><el-input v-model="subForm.parts_replaced"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="8"><el-form-item label="恢复日期"><el-date-picker v-model="subForm.recovery_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="停机时长"><el-input-number v-model="subForm.downtime_hours" :precision="1" style="width:100%;"></el-input-number></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="是否复发"><el-switch v-model="subForm.is_recurring"></el-switch></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="备注"><el-input v-model="subForm.remarks" type="textarea" :rows="2"></el-input></el-form-item>
+            </el-form>
+        </template>
+        <!-- 维保续保表单 -->
+        <template v-if="subFormType==='warranty'">
+            <el-form :model="subForm" label-width="100px">
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="资产编号" required><el-input v-model="subForm.asset_code"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="合同编号"><el-input v-model="subForm.contract_no"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="覆盖范围"><el-input v-model="subForm.coverage" type="textarea" :rows="2"></el-input></el-form-item>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="维保起始日"><el-date-picker v-model="subForm.start_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="维保到期日"><el-date-picker v-model="subForm.end_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="续保决策"><el-select v-model="subForm.renewal_decision" style="width:100%;" clearable><el-option v-for="d in dropdowns.renewal_decisions" :key="d" :label="d" :value="d"></el-option></el-select></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="决策人"><el-input v-model="subForm.decision_person"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="续保合同号"><el-input v-model="subForm.renewal_contract_no"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="维保费用"><el-input-number v-model="subForm.cost" :precision="2" style="width:100%;"></el-input-number></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="续保起始日"><el-date-picker v-model="subForm.renewal_start_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="续保到期日"><el-date-picker v-model="subForm.renewal_end_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="备注"><el-input v-model="subForm.remarks" type="textarea" :rows="2"></el-input></el-form-item>
+            </el-form>
+        </template>
+        <!-- 退役报废表单 -->
+        <template v-if="subFormType==='retirement'">
+            <el-form :model="subForm" label-width="100px">
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="资产编号" required><el-input v-model="subForm.asset_code"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="报废类别"><el-select v-model="subForm.retire_category" style="width:100%;" clearable><el-option v-for="c in dropdowns.retire_categories" :key="c" :label="c" :value="c"></el-option></el-select></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="报废原因"><el-input v-model="subForm.retire_reason" type="textarea" :rows="2"></el-input></el-form-item>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="申请单号"><el-input v-model="subForm.application_no" placeholder="必填，阶段门禁检查项"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="审批人"><el-input v-model="subForm.approver"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="8"><el-form-item label="审批日期"><el-date-picker v-model="subForm.approval_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="下架日期"><el-date-picker v-model="subForm.uninstall_date" type="date" value-format="YYYY-MM-DD" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="下架人"><el-input v-model="subForm.uninstall_person"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="数据清除" required><el-select v-model="subForm.data_cleared" style="width:100%;"><el-option v-for="d in dropdowns.data_clear_options" :key="d" :label="d" :value="d"></el-option></el-select></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="清除人"><el-input v-model="subForm.data_clear_person"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><el-form-item label="处置方式"><el-input v-model="subForm.disposal_method"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="残值回收"><el-input-number v-model="subForm.residual_value" :precision="2" style="width:100%;"></el-input-number></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="备注"><el-input v-model="subForm.remarks" type="textarea" :rows="2"></el-input></el-form-item>
+            </el-form>
+        </template>
+        <template #footer>
+            <el-button @click="subDialogVisible=false">取消</el-button>
+            <el-button type="primary" @click="saveSubForm">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ========== 资产详情/时间线对话框 ========== -->
+    <el-dialog v-model="detailDialogVisible" :title="'资产详情 - ' + detailAsset.asset_code" width="700px">
+        <div style="margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;">
+            <div><b>分类：</b>{{ detailAsset.asset_category }}</div>
+            <div><b>品牌/型号：</b>{{ detailAsset.brand }} {{ detailAsset.model }}</div>
+            <div><b>SN：</b>{{ detailAsset.sn || '-' }}</div>
+            <div><b>位置：</b>{{ detailAsset.location || '-' }}</div>
+            <div><b>阶段：</b><span class="stage-tag" :class="'stage-'+detailAsset.lifecycle_stage">{{ detailAsset.lifecycle_stage }}</span></div>
+            <div><b>责任人：</b>{{ detailAsset.responsible_person || '-' }}</div>
+        </div>
+        <div class="card-title" style="margin-bottom:12px;">生命周期时间线</div>
+        <div v-if="timeline.length===0" style="color:#8C8E96;padding:20px;text-align:center;">暂无生命周期事件记录</div>
+        <div v-for="item in timeline" :key="item.date+item.stage" class="timeline-item">
+            <div class="tl-stage"><span>{{ item.stage }}</span></div>
+            <div class="tl-date">{{ item.date || '-' }}</div>
+            <div class="tl-detail">{{ item.detail }}</div>
+        </div>
+    </el-dialog>
+</div>
+
+<script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/element-plus@2.9.1/dist/index.full.min.js"></script>
+<script>
+const { createApp, ref, reactive, onMounted, computed, watch } = Vue;
+
+const app = createApp({
+    setup() {
+        const API = window.__API_BASE__ || '';
+        const currentTab = ref('dashboard');
+        const currentTime = ref(new Date().toLocaleString('zh-CN'));
+        setInterval(() => { currentTime.value = new Date().toLocaleString('zh-CN'); }, 1000);
+        const ElMessage = ElementPlus.ElMessage;
+
+        // ============ 认证状态 ============
+        const token = ref(localStorage.getItem('asset_token') || '');
+        const currentUser = ref(JSON.parse(localStorage.getItem('asset_user') || '{}'));
+        const loggedIn = computed(() => !!token.value && !!currentUser.value.id);
+
+        const loginForm = reactive({ username: '', password: '' });
+        const loginLoading = ref(false);
+        const changePwdVisible = ref(false);
+        const changePwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' });
+
+        // 权限检查
+        const myPermissions = computed(() => currentUser.value.permissions || []);
+        function hasPerm(perm) { return myPermissions.value.includes(perm) || (currentUser.value.roles||[]).some(r => r.code === 'admin'); }
+        function hasAnyPerm(...perms) { return perms.some(p => hasPerm(p)); }
+
+        // 带Token的API请求
+        async function api(url, opts = {}) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (token.value) headers['Authorization'] = 'Bearer ' + token.value;
+            const res = await fetch(API + url, { headers, ...opts });
+            if (res.status === 401) { doLogout(); throw new Error('登录已过期，请重新登录'); }
+            if (res.status === 403) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || '权限不足'); }
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || res.statusText); }
+            return res.json();
+        }
+
+        async function doLogin() {
+            if (!loginForm.username || !loginForm.password) { ElMessage.warning('请输入用户名和密码'); return; }
+            loginLoading.value = true;
+            try {
+                const res = await fetch(API + '/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(loginForm)
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: '登录失败' }));
+                    throw new Error(err.detail || '登录失败');
+                }
+                const data = await res.json();
+                token.value = data.token;
+                currentUser.value = data.user;
+                localStorage.setItem('asset_token', data.token);
+                localStorage.setItem('asset_user', JSON.stringify(data.user));
+                ElMessage.success('登录成功');
+                loginForm.username = '';
+                loginForm.password = '';
+                loadAppData();
+            } catch (e) {
+                ElMessage.error(e.message);
+            } finally {
+                loginLoading.value = false;
+            }
+        }
+
+        function doLogout() {
+            token.value = '';
+            currentUser.value = {};
+            localStorage.removeItem('asset_token');
+            localStorage.removeItem('asset_user');
+            currentTab.value = 'dashboard';
+        }
+
+        function onUserMenu(cmd) {
+            if (cmd === 'logout') { doLogout(); }
+            else if (cmd === 'changePwd') { changePwdVisible.value = true; Object.assign(changePwdForm, { old_password: '', new_password: '', confirm_password: '' }); }
+        }
+
+        async function doChangePwd() {
+            if (!changePwdForm.new_password || changePwdForm.new_password.length < 6) { ElMessage.warning('新密码至少6位'); return; }
+            if (changePwdForm.new_password !== changePwdForm.confirm_password) { ElMessage.warning('两次密码不一致'); return; }
+            try {
+                await api('/api/auth/change-password', { method: 'PUT', body: JSON.stringify({ old_password: changePwdForm.old_password, new_password: changePwdForm.new_password }) });
+                ElMessage.success('密码修改成功');
+                changePwdVisible.value = false;
+            } catch (e) { ElMessage.error(e.message); }
+        }
+
+        const dropdowns = reactive({
+            categories: [], lifecycle_stages: [], warranty_statuses: [],
+            inspection_results: [], change_types: [], fault_levels: [],
+            handle_methods: [], root_causes: [], renewal_decisions: [],
+            retire_categories: [], data_clear_options: [], completion_statuses: []
+        });
+
+        // Stats & Validation
+        const stats = ref({});
+        const validation = ref({ checks: [], total_assets: 0, total_errors: 0, total_warnings: 0 });
+
+        // Assets
+        const assetList = ref([]);
+        const assetTotal = ref(0);
+        const assetPage = ref(1);
+        const assetFilter = reactive({ search: '', category: '', stage: '', warranty: '' });
+        const assetDialogVisible = ref(false);
+        const assetForm = ref({});
+        const detailDialogVisible = ref(false);
+        const detailAsset = ref({});
+        const timeline = ref([]);
+
+        // Sub-tables
+        const subDialogVisible = ref(false);
+        const subFormType = ref('');
+        const subForm = ref({});
+        const procList = ref([]); const procTotal = ref(0); const procPage = ref(1); const procFilter = ref('');
+        const changeList = ref([]); const changeTotal = ref(0); const changePage = ref(1); const changeFilter = ref('');
+        const faultList = ref([]); const faultTotal = ref(0); const faultPage = ref(1); const faultFilter = ref('');
+        const warrantyList = ref([]); const warrantyTotal = ref(0); const warrantyPage = ref(1); const warrantyFilter = ref('');
+        const retireList = ref([]); const retireTotal = ref(0); const retirePage = ref(1); const retireFilter = ref('');
+
+        // Import/Export
+        const importType = ref('assets');
+        const importFile = ref(null);
+        const importLoading = ref(false);
+        const importResult = ref(null);
+        const exportType = ref('assets');
+        const exportLoading = ref(false);
+        const exportFilter = reactive({ category: '', stage: '', warranty: '', search: '' });
+
+        // Reports
+        const comprehensiveReport = ref({});
+        const warrantyReport = ref({});
+        const warrantyReportDays = ref(90);
+
+        // ============ 用户管理 ============
+        const userList = ref([]);
+        const userTotal = ref(0);
+        const userPage = ref(1);
+        const userFilter = reactive({ search: '', status: '' });
+        const userDialogVisible = ref(false);
+        const userForm = ref({});
+        const allRoles = ref([]);
+
+        // ============ 角色管理 ============
+        const roleList = ref([]);
+        const roleDialogVisible = ref(false);
+        const roleForm = ref({});
+        const permConfig = ref({ groups: [], definitions: {} });
+
+        const subFormTitle = computed(() => {
+            const map = { procurement: '采购入库', change: '变更迁移', fault: '故障维修', warranty: '维保续保', retirement: '退役报废' };
+            return (subForm.value.id ? '编辑' : '新增') + map[subFormType.value] + '记录';
+        });
+
+        async function loadDropdowns() {
+            try { const d = await api('/api/config/dropdowns'); Object.assign(dropdowns, d); } catch(e) { ElMessage.error('下拉选项加载失败'); }
+        }
+
+        async function loadStats() { try { stats.value = await api('/api/stats'); } catch(e) { console.error('统计数据加载失败', e); } }
+        async function loadValidation() { try { validation.value = await api('/api/validation'); } catch(e) { console.error('校验数据加载失败', e); } }
+
+        async function loadAssets() {
+            try {
+                const params = new URLSearchParams({ page: assetPage.value, page_size: 20 });
+                if (assetFilter.search) params.set('search', assetFilter.search);
+                if (assetFilter.category) params.set('category', assetFilter.category);
+                if (assetFilter.stage) params.set('stage', assetFilter.stage);
+                if (assetFilter.warranty) params.set('warranty_status', assetFilter.warranty);
+                const data = await api('/api/assets?' + params);
+                assetList.value = data.items || [];
+                assetTotal.value = data.total || 0;
+            } catch(e) { ElMessage.error(e.message || '资产列表加载失败'); }
+        }
+
+        function openAssetForm(row) {
+            if (row) {
+                assetForm.value = { ...row, entry_date: row.entry_date || null, warranty_expire_date: row.warranty_expire_date || null };
+            } else {
+                assetForm.value = { asset_code: '', asset_category: '服务器', lifecycle_stage: '规划', brand: '', model: '', sn: '', location: '', entry_date: null, responsible_person: '', warranty_status: '', warranty_expire_date: null, ip_address: '', remarks: '' };
+            }
+            assetDialogVisible.value = true;
+        }
+
+        async function saveAsset() {
+            try {
+                if (assetForm.value.id) {
+                    const { id, ...update } = assetForm.value;
+                    await api(`/api/assets/${id}`, { method: 'PUT', body: JSON.stringify(update) });
+                } else {
+                    await api('/api/assets', { method: 'POST', body: JSON.stringify(assetForm.value) });
+                }
+                assetDialogVisible.value = false;
+                ElMessage.success('保存成功');
+                loadAssets();
+                loadStats();
+            } catch (e) {
+                ElMessage.error(e.message);
+            }
+        }
+
+        async function deleteAsset(row) {
+            try {
+                await ElementPlus.ElMessageBox.confirm(`确认删除资产 ${row.asset_code}？`, '删除确认', { type: 'warning' });
+                await api(`/api/assets/${row.id}`, { method: 'DELETE' });
+                ElMessage.success('删除成功');
+                loadAssets();
+                loadStats();
+            } catch (e) {
+                if (e !== 'cancel') ElMessage.error(e.message);
+            }
+        }
+
+        async function onStageChange(val) {
+            if (assetForm.value.id && val) {
+                try {
+                    const result = await api(`/api/assets/${assetForm.value.asset_code}/stage-gate/${encodeURIComponent(val)}`);
+                    if (!result.allowed) {
+                        ElMessage.warning(result.message);
+                    }
+                } catch (e) {}
+            }
+        }
+
+        async function showAssetDetail(row) {
+            detailAsset.value = row;
+            try {
+                const data = await api(`/api/assets/${row.asset_code}/timeline`);
+                timeline.value = data.timeline || [];
+            } catch (e) { timeline.value = []; }
+            detailDialogVisible.value = true;
+        }
+
+        // Sub-table CRUD
+        const apiMap = { procurement: 'procurements', change: 'changes', fault: 'faults', warranty: 'warranties', retirement: 'retirements' };
+
+        function openForm(type, row) {
+            subFormType.value = type;
+            subForm.value = row ? { ...row } : {};
+            subDialogVisible.value = true;
+        }
+
+        async function saveSubForm() {
+            const endpoint = apiMap[subFormType.value];
+            try {
+                if (subForm.value.id) {
+                    const { id, ...update } = subForm.value;
+                    await api(`/api/${endpoint}/${id}`, { method: 'PUT', body: JSON.stringify(update) });
+                } else {
+                    await api(`/api/${endpoint}`, { method: 'POST', body: JSON.stringify(subForm.value) });
+                }
+                subDialogVisible.value = false;
+                ElMessage.success('保存成功');
+                reloadSub(subFormType.value);
+                loadStats();
+            } catch (e) {
+                ElMessage.error(e.message);
+            }
+        }
+
+        async function deleteRecord(endpoint, id, reloadFn) {
+            try {
+                await ElementPlus.ElMessageBox.confirm('确认删除该记录？', '删除确认', { type: 'warning' });
+                await api(`/api/${endpoint}/${id}`, { method: 'DELETE' });
+                ElMessage.success('删除成功');
+                reloadFn();
+            } catch (e) {
+                if (e !== 'cancel') ElMessage.error(e.message);
+            }
+        }
+
+        async function loadProcurements() {
+            try {
+                const params = new URLSearchParams({ page: procPage.value, page_size: 20 });
+                if (procFilter.value) params.set('asset_code', procFilter.value);
+                const data = await api('/api/procurements?' + params);
+                procList.value = data.items || []; procTotal.value = data.total || 0;
+            } catch(e) { console.error('采购数据加载失败', e); }
+        }
+        async function loadChanges() {
+            try {
+                const params = new URLSearchParams({ page: changePage.value, page_size: 20 });
+                if (changeFilter.value) params.set('asset_code', changeFilter.value);
+                const data = await api('/api/changes?' + params);
+                changeList.value = data.items || []; changeTotal.value = data.total || 0;
+            } catch(e) { console.error('变更数据加载失败', e); }
+        }
+        async function loadFaults() {
+            try {
+                const params = new URLSearchParams({ page: faultPage.value, page_size: 20 });
+                if (faultFilter.value) params.set('asset_code', faultFilter.value);
+                const data = await api('/api/faults?' + params);
+                faultList.value = data.items || []; faultTotal.value = data.total || 0;
+            } catch(e) { console.error('故障数据加载失败', e); }
+        }
+        async function loadWarranties() {
+            try {
+                const params = new URLSearchParams({ page: warrantyPage.value, page_size: 20 });
+                if (warrantyFilter.value) params.set('asset_code', warrantyFilter.value);
+                const data = await api('/api/warranties?' + params);
+                warrantyList.value = data.items || []; warrantyTotal.value = data.total || 0;
+            } catch(e) { console.error('维保数据加载失败', e); }
+        }
+        async function loadRetirements() {
+            try {
+                const params = new URLSearchParams({ page: retirePage.value, page_size: 20 });
+                if (retireFilter.value) params.set('asset_code', retireFilter.value);
+                const data = await api('/api/retirements?' + params);
+                retireList.value = data.items || []; retireTotal.value = data.total || 0;
+            } catch(e) { console.error('退役数据加载失败', e); }
+        }
+
+        function reloadSub(type) {
+            const map = { procurement: loadProcurements, change: loadChanges, fault: loadFaults, warranty: loadWarranties, retirement: loadRetirements };
+            map[type]?.();
+        }
+
+        function stageColor(stage) {
+            const colors = { '规划': '#0052D9', '在途': '#ED7B2F', '上架': '#2BA471', '运行': '#008858', '维修': '#E34D59', '待报废': '#8B5CF6', '已报废': '#8C8E96' };
+            return colors[stage] || '#0052D9';
+        }
+
+        function faultRowClass({ row }) {
+            if (row.fault_level === 'P1' || row.fault_level === 'P2') return 'warning-row';
+            return '';
+        }
+
+        // Import/Export functions
+        function onImportFileChange(file) {
+            importFile.value = file;
+        }
+
+        async function downloadTemplate() {
+            try {
+                const res = await fetch(`${API}/api/template/${importType.value}`, {
+                    headers: { 'Authorization': 'Bearer ' + token.value }
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || '下载失败');
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const disposition = res.headers.get('Content-Disposition');
+                let filename = `template_${importType.value}.xlsx`;
+                if (disposition) {
+                    const match = disposition.match(/filename\*=UTF-8''(.+)/);
+                    if (match) filename = decodeURIComponent(match[1]);
+                }
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                ElMessage.error(e.message || '模板下载失败');
+            }
+        }
+
+        async function doImport() {
+            if (!importFile.value) {
+                ElMessage.warning('请先选择Excel文件');
+                return;
+            }
+            importLoading.value = true;
+            importResult.value = null;
+            try {
+                const formData = new FormData();
+                formData.append('file', importFile.value.raw);
+                const endpoint = importType.value === 'assets' ? '/api/import/assets' : `/api/import/${importType.value}`;
+                const headers = {};
+                if (token.value) headers['Authorization'] = 'Bearer ' + token.value;
+                const res = await fetch(API + endpoint, { method: 'POST', body: formData, headers });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: res.statusText }));
+                    throw new Error(err.detail || '导入失败');
+                }
+                importResult.value = await res.json();
+                ElMessage.success(`导入完成：成功 ${importResult.value.success}条`);
+                if (importType.value === 'assets') { loadAssets(); loadStats(); }
+                else { reloadSub(importType.value === 'procurement' ? 'procurement' : importType.value === 'change' ? 'change' : importType.value === 'fault' ? 'fault' : importType.value === 'warranty' ? 'warranty' : 'retirement'); }
+            } catch (e) {
+                ElMessage.error(e.message);
+            } finally {
+                importLoading.value = false;
+            }
+        }
+
+        async function doExport() {
+            exportLoading.value = true;
+            try {
+                let url;
+                if (exportType.value === 'assets') {
+                    const params = new URLSearchParams();
+                    if (exportFilter.category) params.set('category', exportFilter.category);
+                    if (exportFilter.stage) params.set('stage', exportFilter.stage);
+                    if (exportFilter.warranty) params.set('warranty_status', exportFilter.warranty);
+                    if (exportFilter.search) params.set('search', exportFilter.search);
+                    url = `${API}/api/export/assets?${params}`;
+                } else {
+                    url = `${API}/api/export/${exportType.value}`;
+                }
+                const res = await fetch(url, {
+                    headers: { 'Authorization': 'Bearer ' + token.value }
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || '导出失败');
+                }
+                const blob = await res.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                const disposition = res.headers.get('Content-Disposition');
+                let filename = `export_${exportType.value}.xlsx`;
+                if (disposition) {
+                    const match = disposition.match(/filename\*=UTF-8''(.+)/);
+                    if (match) filename = decodeURIComponent(match[1]);
+                }
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+                ElMessage.success('导出文件已下载');
+            } catch (e) {
+                ElMessage.error('导出失败: ' + e.message);
+            } finally {
+                exportLoading.value = false;
+            }
+        }
+
+        // Report functions
+        async function loadReports() {
+            try {
+                comprehensiveReport.value = await api('/api/reports/comprehensive');
+                warrantyReport.value = await api(`/api/reports/warranty-expiry?days=${warrantyReportDays.value}`);
+            } catch(e) { console.error('报表数据加载失败', e); }
+        }
+
+        async function loadWarrantyReport() {
+            try { warrantyReport.value = await api(`/api/reports/warranty-expiry?days=${warrantyReportDays.value}`); } catch(e) { console.error('维保报表加载失败', e); }
+        }
+
+        function formatMoney(val) {
+            if (!val) return '0';
+            if (val >= 10000) return (val / 10000).toFixed(1) + '万';
+            return val.toFixed(0);
+        }
+
+        function ageColor(bucket) {
+            const colors = { '0-1年': '#2BA471', '1-3年': '#0052D9', '3-5年': '#ED7B2F', '5-8年': '#8B5CF6', '8年以上': '#E34D59' };
+            return colors[bucket] || '#0052D9';
+        }
+
+        // ============ 用户管理 ============
+        async function loadUsers() {
+            try {
+                const params = new URLSearchParams({ page: userPage.value, page_size: 20 });
+                if (userFilter.search) params.set('search', userFilter.search);
+                if (userFilter.status) params.set('status', userFilter.status);
+                const data = await api('/api/users?' + params);
+                userList.value = data.items || [];
+                userTotal.value = data.total || 0;
+            } catch(e) { ElMessage.error('用户列表加载失败'); }
+        }
+
+        async function loadAllRoles() {
+            try {
+                const data = await api('/api/roles');
+                allRoles.value = data.items || [];
+            } catch(e) { console.error('角色列表加载失败', e); }
+        }
+
+        function openUserForm(row) {
+            if (row) {
+                userForm.value = {
+                    id: row.id, username: row.username, real_name: row.real_name || '',
+                    email: row.email || '', phone: row.phone || '', department: row.department || '',
+                    status: row.status, password: '', role_ids: (row.roles || []).map(r => r.id)
+                };
+            } else {
+                userForm.value = { username: '', real_name: '', email: '', phone: '', department: '', status: 'active', password: '', role_ids: [] };
+            }
+            loadAllRoles();
+            userDialogVisible.value = true;
+        }
+
+        async function saveUser() {
+            try {
+                const body = { ...userForm.value };
+                if (body.id && !body.password) delete body.password;
+                if (body.id) {
+                    const { id, ...update } = body;
+                    await api(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(update) });
+                } else {
+                    if (!body.username || !body.password) { ElMessage.warning('用户名和密码不能为空'); return; }
+                    await api('/api/users', { method: 'POST', body: JSON.stringify(body) });
+                }
+                userDialogVisible.value = false;
+                ElMessage.success('保存成功');
+                loadUsers();
+            } catch (e) {
+                ElMessage.error(e.message);
+            }
+        }
+
+        async function deleteUser(row) {
+            try {
+                await ElementPlus.ElMessageBox.confirm(`确认删除用户 ${row.username}？`, '删除确认', { type: 'warning' });
+                await api(`/api/users/${row.id}`, { method: 'DELETE' });
+                ElMessage.success('删除成功');
+                loadUsers();
+            } catch (e) {
+                if (e !== 'cancel') ElMessage.error(e.message);
+            }
+        }
+
+        async function resetUserPwd(row) {
+            try {
+                await ElementPlus.ElMessageBox.confirm(`确认重置用户 ${row.username} 的密码？`, '重置密码', { type: 'warning' });
+                const result = await api(`/api/users/${row.id}/reset-password`, {
+                    method: 'POST',
+                    body: JSON.stringify({ new_password: null }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                ElMessage.success(result.message || '密码已重置');
+            } catch (e) {
+                if (e !== 'cancel') ElMessage.error(e.message);
+            }
+        }
+
+        // ============ 角色管理 ============
+        async function loadRoles() {
+            try {
+                const data = await api('/api/roles');
+                roleList.value = data.items || [];
+            } catch(e) { console.error('角色加载失败', e); }
+        }
+
+        async function loadPermConfig() {
+            try {
+                permConfig.value = await api('/api/auth/permissions');
+            } catch(e) { console.error('权限配置加载失败', e); }
+        }
+
+        function openRoleForm(row) {
+            loadPermConfig();
+            if (row) {
+                const permMap = {};
+                (permConfig.value.groups || []).forEach(g => g.permissions.forEach(p => { permMap[p] = row.permissions.includes(p); }));
+                row.permissions.forEach(p => { permMap[p] = true; });
+                roleForm.value = { id: row.id, name: row.name, code: row.code, description: row.description || '', permMap };
+            } else {
+                const permMap = {};
+                (permConfig.value.groups || []).forEach(g => g.permissions.forEach(p => { permMap[p] = false; }));
+                roleForm.value = { name: '', code: '', description: '', permMap };
+            }
+            roleDialogVisible.value = true;
+        }
+
+        async function saveRole() {
+            try {
+                const perms = Object.keys(roleForm.value.permMap || {}).filter(k => roleForm.value.permMap[k]);
+                const body = { name: roleForm.value.name, code: roleForm.value.code, description: roleForm.value.description, permissions: perms };
+                if (roleForm.value.id) {
+                    await api(`/api/roles/${roleForm.value.id}`, { method: 'PUT', body: JSON.stringify(body) });
+                } else {
+                    await api('/api/roles', { method: 'POST', body: JSON.stringify(body) });
+                }
+                roleDialogVisible.value = false;
+                ElMessage.success('保存成功');
+                loadRoles();
+            } catch (e) {
+                ElMessage.error(e.message);
+            }
+        }
+
+        async function deleteRole(row) {
+            try {
+                await ElementPlus.ElMessageBox.confirm(`确认删除角色 ${row.name}？`, '删除确认', { type: 'warning' });
+                await api(`/api/roles/${row.id}`, { method: 'DELETE' });
+                ElMessage.success('删除成功');
+                loadRoles();
+            } catch (e) {
+                if (e !== 'cancel') ElMessage.error(e.message);
+            }
+        }
+
+        // ============ 加载数据 ============
+        function loadAppData() {
+            loadDropdowns();
+            loadStats();
+            loadValidation();
+            loadAssets();
+            loadProcurements();
+            loadChanges();
+            loadFaults();
+            loadWarranties();
+            loadRetirements();
+            loadReports();
+        }
+
+        // 切换到用户/角色tab时加载数据
+        watch(currentTab, (val) => {
+            if (val === 'users') { loadUsers(); loadAllRoles(); }
+            if (val === 'roles') { loadRoles(); loadPermConfig(); }
+        });
+
+        onMounted(async () => {
+            if (loggedIn.value) {
+                // 验证token是否仍然有效
+                try {
+                    const user = await api('/api/auth/me');
+                    currentUser.value = user;
+                    localStorage.setItem('asset_user', JSON.stringify(user));
+                    loadAppData();
+                } catch(e) {
+                    doLogout();
+                }
+            }
+        });
+
+        return {
+            currentTab, currentTime, dropdowns, stats, validation,
+            loggedIn, token, currentUser, loginForm, loginLoading,
+            changePwdVisible, changePwdForm,
+            hasPerm, hasAnyPerm, onUserMenu, doLogin, doLogout, doChangePwd,
+            assetList, assetTotal, assetPage, assetFilter, assetDialogVisible, assetForm,
+            detailDialogVisible, detailAsset, timeline,
+            subDialogVisible, subFormType, subForm, subFormTitle,
+            procList, procTotal, procPage, procFilter,
+            changeList, changeTotal, changePage, changeFilter,
+            faultList, faultTotal, faultPage, faultFilter,
+            warrantyList, warrantyTotal, warrantyPage, warrantyFilter,
+            retireList, retireTotal, retirePage, retireFilter,
+            importType, importFile, importLoading, importResult, exportType, exportLoading, exportFilter,
+            comprehensiveReport, warrantyReport, warrantyReportDays,
+            userList, userTotal, userPage, userFilter,
+            userDialogVisible, userForm, allRoles,
+            roleList, roleDialogVisible, roleForm, permConfig,
+            loadAssets, loadValidation, loadStats,
+            openAssetForm, saveAsset, deleteAsset, onStageChange, showAssetDetail,
+            openForm, saveSubForm, deleteRecord,
+            loadProcurements, loadChanges, loadFaults, loadWarranties, loadRetirements,
+            loadReports, loadWarrantyReport,
+            downloadTemplate, doImport, doExport, onImportFileChange,
+            loadUsers, openUserForm, saveUser, deleteUser, resetUserPwd,
+            loadRoles, openRoleForm, saveRole, deleteRole,
+            stageColor, faultRowClass, formatMoney, ageColor
+        };
+    }
+});
+
+app.use(ElementPlus);
+app.mount('#app');
+</script>
+</body>
+</html>
