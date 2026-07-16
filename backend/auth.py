@@ -381,8 +381,6 @@ DEFAULT_ROLES = [
     },
 ]
 
-# BUG-012 修复：默认管理员使用强密码而非 admin123
-# 生产环境应通过环境变量设置，开发环境使用此默认值
 DEFAULT_ADMIN = {
     "username": "admin",
     "real_name": "系统管理员",

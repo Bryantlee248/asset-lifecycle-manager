@@ -104,7 +104,7 @@ def test_first_production_bootstrap_requires_an_admin_password(
 
 
 def test_release_files_do_not_publish_a_default_admin_password():
-    forbidden = "Admin@2026!Secure"
+    forbidden_values = ("Admin@2026!Secure", "admin123")
     files = [
         PROJECT_ROOT / ".env.example",
         PROJECT_ROOT / "start.py",
@@ -112,7 +112,11 @@ def test_release_files_do_not_publish_a_default_admin_password():
         PROJECT_ROOT / "backend" / "auth.py",
     ]
 
-    assert all(forbidden not in path.read_text(encoding="utf-8") for path in files)
+    assert all(
+        forbidden not in path.read_text(encoding="utf-8")
+        for forbidden in forbidden_values
+        for path in files
+    )
 
 
 def test_database_uses_the_configured_url(isolated_runtime):
