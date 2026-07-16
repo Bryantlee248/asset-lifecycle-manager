@@ -1,0 +1,222 @@
+classDiagram
+    direction TB
+
+    class Asset {
+        +int id
+        +str asset_code UNIQUE
+        +str asset_category NOT_NULL
+        +str asset_category_2
+        +str asset_name
+        +str brand
+        +str model
+        +str sn UNIQUE
+        +str room
+        +str cabinet
+        +str u_position
+        +str lifecycle_stage NOT_NULL DEFAULT_规划
+        +str asset_status
+        +date entry_date
+        +date purchase_date
+        +date acceptance_date
+        +date deployment_date
+        +str responsible_person
+        +str owner_company
+        +str department
+        +str warranty_status
+        +date warranty_expire_date
+        +int maintenance_period
+        +str supplier
+        +float original_value
+        +float current_value
+        +int depreciation_years
+        +str config_info
+        +int rack_unit
+        +float power_consumption
+        +str network_zone
+        +str critical_level
+        +date last_inspection_date
+        +date next_inspection_date
+        +datetime last_updated
+        +str remarks
+    }
+
+    class Procurement {
+        +int id
+        +str procurement_no UNIQUE
+        +str asset_code NULLABLE
+        +str asset_category
+        +str asset_category_2
+        +str brand
+        +str model
+        +int quantity DEFAULT_1
+        +float unit_price
+        +float total_price
+        +str contract_no
+        +str supplier
+        +str approval_status DEFAULT_审批中
+        +date arrival_date
+        +str inspector
+        +str inspection_result
+        +date install_date
+        +str remarks
+    }
+
+    class AssetInbound {
+        +int id
+        +str inbound_no UNIQUE NOT_NULL
+        +str asset_code NULLABLE
+        +int procurement_id NULLABLE
+        +str inbound_type NOT_NULL
+        +str asset_category NOT_NULL
+        +str asset_category_2
+        +str asset_name
+        +str brand
+        +str model
+        +str sn
+        +int quantity DEFAULT_1
+        +date inbound_date
+        +str source_location
+        +str room
+        +str cabinet
+        +str u_position
+        +str inspector
+        +str inspection_result
+        +date inspection_date
+        +str responsible_person
+        +str remarks
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class AssetOutbound {
+        +int id
+        +str outbound_no UNIQUE NOT_NULL
+        +str asset_code NOT_NULL
+        +str outbound_type NOT_NULL
+        +date outbound_date
+        +str destination
+        +str outbound_reason
+        +str approver
+        +str executor
+        +date uninstall_date
+        +str data_cleared
+        +str data_clear_person
+        +str disposal_method
+        +str remarks
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class Change {
+        +int id
+        +str asset_code NOT_NULL
+        +str change_type NOT_NULL
+        +str work_order_no
+        +str change_content
+        +str old_config
+        +str new_config
+        +str change_reason
+        +str approver
+        +str executor
+        +date execute_date
+        +str completion_status DEFAULT_进行中
+        +str remarks
+    }
+
+    class Fault {
+        +int id
+        +str asset_code NOT_NULL
+        +str fault_level NOT_NULL
+        +str fault_no
+        +float repair_cost
+        +str fault_description
+        +date fault_date
+        +str repair_person
+        +str handle_method
+        +str parts_replaced
+        +str root_cause
+        +date recovery_date
+        +float downtime_hours
+        +bool is_recurring DEFAULT_false
+        +str remarks
+    }
+
+    class Warranty {
+        +int id
+        +str asset_code NOT_NULL
+        +str warranty_no
+        +str warranty_type
+        +str warranty_supplier
+        +str contract_no
+        +str coverage
+        +date start_date
+        +date end_date
+        +str renewal_decision
+        +str decision_person
+        +date decision_date
+        +str renewal_contract_no
+        +date renewal_start_date
+        +date renewal_end_date
+        +float cost
+        +str remarks
+    }
+
+    class Retirement {
+        +int id
+        +str asset_code NOT_NULL
+        +str retire_reason
+        +str retire_category
+        +str application_no
+        +str approver
+        +date approval_date
+        +date uninstall_date
+        +str uninstall_person
+        +str data_cleared
+        +str data_clear_person
+        +str disposal_method
+        +float residual_value
+        +str remarks
+    }
+
+    class ApprovalRequest {
+        +int id
+        +str request_no UNIQUE
+        +str approval_type
+        +str asset_code
+        +str current_stage
+        +str target_stage
+        +str reason
+        +str attachments
+        +str status
+        +int applicant_id
+        +datetime applied_at
+        +int current_level
+        +int rejection_count
+        +datetime approved_at
+    }
+
+    %% ===== 关系 =====
+    Asset "1" <-- "0..*" Procurement : asset_code(nullable)
+    Asset "1" <-- "0..*" Change : asset_code
+    Asset "1" <-- "0..*" Fault : asset_code
+    Asset "1" <-- "0..*" Warranty : asset_code
+    Asset "1" <-- "0..*" Retirement : asset_code
+    Asset "1" <-- "0..*" ApprovalRequest : asset_code
+    AssetInbound "0..1" --> "0..1" Asset : asset_code(验收后回填)
+    AssetInbound "0..1" --> "0..1" Procurement : procurement_id(可选关联)
+    AssetOutbound "1" --> "1" Asset : asset_code(必填)
+    AssetOutbound "0..1" --> "0..1" Retirement : outbound_type=报废时自动创建
+
+    %% ===== 枚举常量(类图表示) =====
+    class Constants {
+        <<constants>>
+        FAULT_LEVELS : P1, P2-严重, P3, P4
+        CHANGE_TYPES : 位置变更, 配置变更, 归属变更, 其他
+        WARRANTY_TYPES : 整机维保, 部件维保, 延保服务, 现场支持
+        INBOUND_TYPES : 新购, 调拨, 归还, 其他
+        OUTBOUND_TYPES : 报废, 调拨, 归还, 其他
+        PROCUREMENT_APPROVAL_STATUSES : 审批中, 已通过, 已驳回
+        DISPOSAL_METHODS : 回收处理, 拆解利用, 捐赠, 报废销毁, 其他
+        RETIRE_CATEGORIES : 正常报废, 损坏报废, 技术淘汰, 强制报废, 其他
+        CRITICAL_LEVELS : 核心, 重要, 一般
+    }

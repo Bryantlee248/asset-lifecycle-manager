@@ -1,0 +1,75 @@
+classDiagram
+    %% ===== 新增：模板数据模型 =====
+    class WorkflowTemplate {
+        +int id
+        +String approval_type
+        +String approval_type_name
+        +String current_stage
+        +String target_stage
+        +String mode
+        +JSON chain
+        +Boolean enabled
+        +Text remark
+        +DateTime created_at
+        +DateTime updated_at
+        +get_nodes() List~Node~
+        +node_count() int
+    }
+
+    %% ===== 新增：通用解释器 =====
+    class WorkflowEngine {
+        -Session db
+        +get_template(approval_type) WorkflowTemplate
+        +list_templates() List~WorkflowTemplate~
+        +create_steps(request, approver_ids) List~ApprovalStep~
+        +is_multi_mode(approval_type) bool
+        +has_more_levels(approval_type, current_level) bool
+        +validate_stage(approval_type, asset) void
+        +get_target_stage(approval_type, fallback) String
+        +save_template(data) WorkflowTemplate
+        +update_template(id, data) WorkflowTemplate
+    }
+
+    %% ===== 复用（不改结构）：database.py =====
+    class ApprovalRequest {
+        +int id
+        +String approval_type
+        +String current_stage
+        +String target_stage
+        +int current_level
+        +String status
+        +steps ApprovalStep[]
+    }
+    class ApprovalStep {
+        +int id
+        +int request_id
+        +int level
+        +int approver_id
+        +String approver_role
+        +String status
+    }
+    class Asset {
+        +String asset_code
+        +String lifecycle_stage
+    }
+    class User {
+        +int id
+        +String status
+    }
+    class Role {
+        +String code
+        +User[] users
+    }
+
+    %% ===== 关系 =====
+    WorkflowEngine ..> WorkflowTemplate : 读取模板(单一数据源)
+    WorkflowEngine ..> ApprovalRequest : 为请求生成步骤
+    WorkflowEngine ..> ApprovalStep : create()
+    WorkflowEngine ..> Asset : 阶段校验
+    WorkflowEngine ..> Role : auto_assign_approver()
+    ApprovalRequest "1" *-- "many" ApprovalStep : steps
+    Role "1" *-- "many" User : users
+    WorkflowTemplate .. ApprovalRequest : 按 approval_type 关联(无外键)
+
+    note for WorkflowTemplate "chain 存为 JSON 列；\n节点元素 {level, role}\n阶段3 预留扩展位 vote_mode/approvers（本期解释器忽略）"
+    note for WorkflowEngine "替换原 approval.py 的\ncreate_approval_steps 与\nprocess_approval_action 中对\nAPPROVAL_CHAIN_CONFIG 的读取"

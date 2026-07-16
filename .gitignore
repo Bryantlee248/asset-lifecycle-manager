@@ -1,4 +1,10 @@
 __pycache__/
 *.pyc
 *.db
+*.log
+.pytest_cache/
+.venv/
+.worktrees/
 .env
+.jwt_secret
+.jwt_dev_key

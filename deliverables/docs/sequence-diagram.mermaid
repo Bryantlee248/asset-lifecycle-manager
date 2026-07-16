@@ -1,0 +1,70 @@
+sequenceDiagram
+    participant U as 用户
+    participant FE as 前端SPA
+    participant API as FastAPI(main.py)
+    participant DB as SQLite
+    participant VAL as validation.py
+    participant APP as approval.py
+    participant MIG as migrate.py
+
+    %% ===== 移入验收合格 → 自动创建Asset =====
+    U->>FE: 创建移入记录(新购)
+    FE->>API: POST /api/inbounds
+    API->>DB: INSERT asset_inbound
+    API-->>FE: 返回移入记录(inbound_no)
+    
+    U->>FE: 更新验收结果=合格
+    FE->>API: PUT /api/inbounds/{id} {inspection_result: "合格"}
+    API->>DB: UPDATE asset_inbound SET inspection_result="合格"
+    API->>API: 检测inspection_result变更为"合格"
+    API->>DB: INSERT assets (自动创建: asset_code/分类/品牌/型号/SN/入场日期)
+    API->>DB: UPDATE asset_inbound SET asset_code=新资产编号
+    API-->>FE: 返回更新结果+提示"已自动创建资产记录"
+
+    %% ===== 移出报废 → 自动创建Retirement + 审批流 =====
+    U->>FE: 创建移出记录(报废)
+    FE->>API: POST /api/outbounds {outbound_type: "报废"}
+    API->>API: 检测outbound_type="报废"
+    API->>DB: INSERT asset_outbound
+    API->>DB: INSERT retirements (自动创建退役记录)
+    API->>APP: outbound_retirement_auto_submit()
+    APP->>DB: INSERT approval_request (retirement_approval)
+    APP->>DB: INSERT approval_steps
+    APP->>DB: INSERT approval_notifications
+    API-->>FE: 返回移出记录+提示"已自动创建退役记录并提交报废审批"
+
+    %% ===== P1/P2-严重故障 → 自动降级 + 审批 =====
+    U->>FE: 创建故障记录(P2-严重)
+    FE->>API: POST /api/faults {fault_level: "P2-严重"}
+    API->>DB: INSERT faults
+    API->>API: 检测fault_level in ["P1", "P2-严重"]
+    API->>DB: UPDATE assets SET lifecycle_stage="维修"
+    API->>APP: auto_submit_fault_approval(asset_code, fault_id, "P2-严重")
+    APP->>DB: INSERT approval_request (fault_degrade_approval)
+    APP->>DB: INSERT approval_steps
+    API-->>FE: 返回故障记录+提示"已自动降级并提交审批"
+
+    %% ===== 数据迁移执行 =====
+    Note over MIG,DB: 迁移脚本执行流程
+    MIG->>DB: 备份 asset_lifecycle.db
+    MIG->>DB: PRAGMA foreign_keys=OFF
+    MIG->>DB: CREATE TABLE asset_inbound
+    MIG->>DB: CREATE TABLE asset_outbound
+    MIG->>MIG: parse_location(旧location) → room/cabinet/u_position
+    MIG->>DB: CREATE assets_new → INSERT数据 → DROP assets → RENAME
+    MIG->>DB: CREATE procurement_new → INSERT → DROP → RENAME
+    MIG->>DB: CREATE changes_new → INSERT → DROP → RENAME
+    MIG->>DB: ALTER TABLE faults ADD fault_no/repair_cost
+    MIG->>DB: ALTER TABLE warranties ADD warranty_no/type/supplier
+    MIG->>DB: UPDATE faults SET fault_level='P2-严重' WHERE fault_level='P2'
+    MIG->>DB: PRAGMA foreign_keys=ON
+    MIG->>MIG: verify_migration() 行数对比+外键完整性
+
+    %% ===== 校验仪表盘查询 =====
+    U->>FE: 查看校验仪表盘
+    FE->>API: GET /api/validation
+    API->>VAL: run_all_checks(db)
+    VAL->>DB: 10项校验查询
+    VAL-->>API: 返回ValidationDashboard(10项checks)
+    Note over API,FE: +P1/P2-严重统计卡片(不计入error/warning)
+    API-->>FE: 返回校验结果+统计卡片

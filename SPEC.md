@@ -28,8 +28,8 @@
 | 后端框架 | FastAPI | Python 3.10+ |
 | ORM | SQLAlchemy 2.0 | Declarative Base |
 | 数据库 | SQLite | 文件级数据库 `asset_lifecycle.db` |
-| 认证 | PyJWT (python-jose) | HS256签名，24小时过期 |
-| 密码哈希 | passlib[bcrypt] | bcrypt算法 |
+| 认证 | PyJWT | HS256签名，24小时过期 |
+| 密码哈希 | passlib + bcrypt | CryptContext(schemes=["bcrypt"]) |
 | 数据校验 | Pydantic v2 | BaseModel + Field |
 | Excel处理 | openpyxl | 导入导出+模板 |
 | Web服务器 | uvicorn | ASGI |
@@ -39,12 +39,13 @@
 
 ### 2.1 Python依赖清单
 ```
-fastapi>=0.100.0
-uvicorn>=0.23.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
 sqlalchemy>=2.0.0
 pydantic>=2.0.0
 PyJWT>=2.8.0
-passlib[bcrypt]>=1.7.4
+passlib>=1.7.4
+bcrypt>=4.1.0
 python-multipart>=0.0.6
 openpyxl>=3.1.0
 ```
@@ -57,17 +58,20 @@ openpyxl>=3.1.0
 asset-lifecycle-manager/
 ├── start.py                    # 一键启动脚本
 ├── asset_lifecycle.db          # SQLite数据库（自动创建）
-├── README.txt                  # 简要说明
+├── SPEC.md                     # 完整重建规格文档
 ├── backend/
 │   ├── main.py                 # FastAPI主应用（所有路由）
-│   ├── database.py             # 数据库连接+所有ORM模型
-│   ├── schemas.py              # 所有Pydantic模型（请求/响应）
-│   ├── auth.py                 # JWT认证+RBAC权限+默认数据初始化
-│   ├── validation.py           # 13项校验+阶段门禁逻辑
-│   ├── constants.py            # 统一下拉选项常量
+│   ├── database.py             # 数据库连接+所有ORM模型（含审批3表）
+│   ├── schemas.py              # 所有Pydantic模型（含12个审批类）
+│   ├── auth.py                 # JWT认证+RBAC权限+默认数据初始化（含4项审批权限）
+│   ├── validation.py           # 13项校验+阶段门禁逻辑（含运行→在途跳转）
+│   ├── constants.py            # 统一下拉选项常量+审批类型/状态/链配置
+│   ├── approval.py             # 审批工作流核心引擎（7核心函数）
 │   └── import_export_reports.py # 导入导出+4个报表API
-└── frontend/
-    └── index.html              # 单文件SPA（Vue3+Element Plus CDN）
+├── frontend/
+│   └── index.html              # 单文件SPA（Vue3+Element Plus CDN，含审批中心+通知）
+└── tests/
+    └── test_approval.py        # 87项pytest单元测试
 ```
 
 ---
@@ -80,7 +84,7 @@ asset-lifecycle-manager/
 - `created_at` / `updated_at` 使用 `server_default=func.now()`
 - 主键统一为 `id: Integer, autoincrement`
 
-### 4.2 表清单（9张表）
+### 4.2 表清单（12张表）
 
 #### 4.2.1 users（用户表）
 
@@ -244,6 +248,54 @@ asset-lifecycle-manager/
 | detail | Text | | 操作详情 |
 | created_at | DateTime | server_default=now | |
 
+#### 4.2.11 approval_requests（审批申请表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | Integer | PK, auto | |
+| request_no | String(30) | UNIQUE, NOT NULL | 审批单号 APR-YYYYMMDD-SEQ |
+| asset_code | String(30) | NOT NULL | 关联资产编号 |
+| approval_type | String(30) | NOT NULL | 审批类型枚举 |
+| reason | Text | NOT NULL | 申请原因 |
+| target_stage | String(20) | | 目标阶段 |
+| status | String(20) | NOT NULL, default="draft" | 审批状态：draft/pending/approved/rejected/cancelled |
+| applicant_id | Integer | FK→users.id, NOT NULL | 申请人 |
+| current_step_level | Integer | default=0 | 当前审批步骤级别 |
+| resubmit_count | Integer | default=0 | 重新提交次数 |
+| attachments | Text | default="[]" | 附件列表JSON |
+| approved_at | DateTime | | 审批通过时间 |
+| rejected_at | DateTime | | 驳回时间 |
+| cancelled_at | DateTime | | 撤回时间 |
+| created_at | DateTime | server_default=now | |
+| updated_at | DateTime | server_default=now, onupdate=now | |
+
+#### 4.2.12 approval_steps（审批步骤表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | Integer | PK, auto | |
+| request_id | Integer | FK→approval_requests.id, NOT NULL | 关联审批单 |
+| level | Integer | NOT NULL | 步骤级别（1=一级，2=二级） |
+| role_code | String(50) | NOT NULL | 审批角色编码 |
+| approver_id | Integer | FK→users.id | 审批人（自动指派或手动） |
+| status | String(20) | NOT NULL, default="pending" | 步骤状态：pending/approved/rejected |
+| comment | Text | | 审批意见 |
+| action_at | DateTime | | 审批操作时间 |
+| created_at | DateTime | server_default=now | |
+
+#### 4.2.13 approval_notifications（审批通知表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | Integer | PK, auto | |
+| request_id | Integer | FK→approval_requests.id, NOT NULL | 关联审批单 |
+| user_id | Integer | FK→users.id, NOT NULL | 通知接收人 |
+| type | String(30) | NOT NULL | 通知类型：pending_approval/approved/rejected/cancelled/submitted |
+| title | String(100) | | 通知标题 |
+| content | Text | | 通知内容 |
+| is_read | Boolean | default=False | 是否已读 |
+| created_at | DateTime | server_default=now | |
+
 ---
 
 ## 五、下拉选项常量
@@ -263,18 +315,83 @@ DATA_CLEAR_OPTIONS = ["已清除", "未清除", "不适用"]
 COMPLETION_STATUSES = ["进行中", "已完成", "已取消"]
 ```
 
+**阶段常量**（用于业务逻辑，避免魔法字符串）：
+```python
+STAGE_PLANNING = "规划"
+STAGE_IN_TRANSIT = "在途"
+STAGE_INSTALLED = "上架"
+STAGE_RUNNING = "运行"
+STAGE_REPAIR = "维修"
+STAGE_PENDING_RETIRE = "待报废"
+STAGE_RETIRED = "已报废"
+ACTIVE_STAGES = ["上架", "运行", "维修"]  # 在用阶段集合
+```
+
+**审批类型常量**：
+```python
+APPROVAL_TYPE_PROCUREMENT = "procurement_approval"     # 采购立项
+APPROVAL_TYPE_INSPECTION = "inspection_approval"       # 验收确认
+APPROVAL_TYPE_FAULT_DEGRADE = "fault_degrade_approval" # 故障降级
+APPROVAL_TYPE_MIGRATION = "migration_approval"         # 变更迁移
+APPROVAL_TYPE_WARRANTY_RENEWAL = "warranty_renewal_approval" # 维保续保
+APPROVAL_TYPE_RETIREMENT = "retirement_approval"       # 报废退役
+
+APPROVAL_STATUSES = ["draft", "pending", "approved", "rejected", "cancelled"]
+APPROVAL_STEP_STATUSES = ["pending", "approved", "rejected"]
+```
+
+**审批链配置**（6种审批类型→阶段变更+审批模式+审批链）：
+```python
+APPROVAL_CHAIN_CONFIG = {
+    "procurement_approval": {
+        "current_stage": "规划", "target_stage": "在途",
+        "mode": "single",
+        "chain": [{"level": 1, "role": "ops_manager"}]
+    },
+    "inspection_approval": {
+        "current_stage": "在途", "target_stage": "上架",
+        "mode": "single",
+        "chain": [{"level": 1, "role": "ops_manager"}]
+    },
+    "fault_degrade_approval": {
+        "current_stage": "运行", "target_stage": "维修",
+        "mode": "single",
+        "chain": [{"level": 1, "role": "ops_manager"}]
+    },
+    "migration_approval": {
+        "current_stage": "运行", "target_stage": "在途",
+        "mode": "single",
+        "chain": [{"level": 1, "role": "ops_manager"}]
+    },
+    "warranty_renewal_approval": {
+        "current_stage": "运行", "target_stage": "运行",
+        "mode": "single",
+        "chain": [{"level": 1, "role": "ops_manager"}]
+    },
+    "retirement_approval": {
+        "current_stage": "运行", "target_stage": "待报废",
+        "mode": "dual",
+        "chain": [
+            {"level": 1, "role": "ops_manager"},
+            {"level": 2, "role": "admin"}
+        ]
+    },
+}
+```
+
 ---
 
 ## 六、RBAC权限体系
 
 ### 6.1 JWT认证配置
 - **算法**：HS256
-- **密钥**：环境变量 `JWT_SECRET_KEY`，默认值 `dev-only-change-in-production-2024`
+- **密钥**：环境变量 `JWT_SECRET_KEY`，生产环境（`ENV=production`）未设置则拒绝启动；开发环境使用回退值 `dev-only-DO-NOT-USE-IN-PRODUCTION`
 - **Token过期**：24小时
 - **Token载荷**：`{ "sub": str(user_id), "username": "xxx", "exp": timestamp }`
+- **时间计算**：使用 `datetime.now(timezone.utc)`（非已弃用的 `datetime.utcnow()`）
 - **前端传输**：`Authorization: Bearer <token>`
 
-### 6.2 38项细粒度权限（11个分组）
+### 6.2 42项细粒度权限（12个分组）
 
 | 分组 | 权限代码 | 权限说明 |
 |------|---------|---------|
@@ -316,21 +433,25 @@ COMPLETION_STATUSES = ["进行中", "已完成", "已取消"]
 | | roles:create | 新增角色 |
 | | roles:edit | 编辑角色 |
 | | roles:delete | 删除角色 |
+| 审批工作流 | approval:view | 查看审批列表 |
+| | approval:submit | 提交审批申请 |
+| | approval:approve | 审批通过/驳回 |
+| | approval:cancel | 撤回审批申请 |
 
 ### 6.3 四个预设角色
 
 | 角色 | code | 权限数 | 说明 |
 |------|------|--------|------|
-| 系统管理员 | admin | 38（全部） | 可管理用户和角色 |
-| 运维主管 | ops_manager | 28 | 管理所有资产数据，查看报表校验，不可管理用户 |
-| 运维工程师 | ops_engineer | 18 | 查看和编辑资产，不可删除，不可管理用户 |
-| 只读用户 | viewer | 11 | 仅查看+导出，不可增删改 |
+| 系统管理员 | admin | 42（全部） | 可管理用户和角色 |
+| 运维主管 | ops_manager | 32 | 管理所有资产数据+审批通过，查看报表校验，不可管理用户 |
+| 运维工程师 | ops_engineer | 20 | 查看和编辑资产+提交审批申请，不可删除，不可管理用户 |
+| 只读用户 | viewer | 12 | 仅查看+导出+查看审批，不可增删改 |
 
-**运维主管权限**：dashboard:view, validation:view, import_export:*, reports:view, assets:*, procurement:*, change:*, fault:*, warranty:*, retirement:*
+**运维主管权限**：dashboard:view, validation:view, import_export:*, reports:view, assets:*, procurement:*, change:*, fault:*, warranty:*, retirement:*, approval:view+approve+cancel
 
-**运维工程师权限**：dashboard:view, validation:view, import_export:view+export, reports:view, assets:view+create+edit, procurement:view+create+edit, change:view+create+edit, fault:view+create+edit, warranty:view+create+edit, retirement:view+create+edit
+**运维工程师权限**：dashboard:view, validation:view, import_export:view+export, reports:view, assets:view+create+edit, procurement:view+create+edit, change:view+create+edit, fault:view+create+edit, warranty:view+create+edit, retirement:view+create+edit, approval:view+submit
 
-**只读用户权限**：dashboard:view, validation:view, import_export:view+export, reports:view, assets:view, procurement:view, change:view, fault:view, warranty:view, retirement:view
+**只读用户权限**：dashboard:view, validation:view, import_export:view+export, reports:view, assets:view, procurement:view, change:view, fault:view, warranty:view, retirement:view, approval:view
 
 ### 6.4 默认管理员
 - 用户名：`admin`
@@ -466,7 +587,7 @@ COMPLETION_STATUSES = ["进行中", "已完成", "已取消"]
 
 | 方法 | 路径 | 权限 | 说明 |
 |------|------|------|------|
-| GET | /api/assets/{asset_code}/stage-gate/{target_stage} | 无 | 检查阶段跳转是否允许 |
+| GET | /api/assets/{asset_code}/stage-gate/{target_stage} | assets:view | 检查阶段跳转是否允许 |
 
 ### 7.14 下拉选项配置接口（1个）
 
@@ -482,7 +603,7 @@ COMPLETION_STATUSES = ["进行中", "已完成", "已取消"]
 | POST | /api/import/{table_type} | import_export:import | 批量导入分表Excel（procurement/change/fault/warranty/retirement） |
 | GET | /api/export/assets | import_export:export | 导出资产台账Excel（支持筛选） |
 | GET | /api/export/{table_type} | import_export:export | 导出分表Excel |
-| GET | /api/template/{table_type} | 无 | 下载导入模板（含示例+提示行） |
+| GET | /api/template/{table_type} | import_export:import | 下载导入模板（含示例+提示行） |
 
 **导入逻辑**：
 1. 解析Excel表头，映射中文列名→英文字段名
@@ -508,6 +629,76 @@ COMPLETION_STATUSES = ["进行中", "已完成", "已取消"]
 
 **综合报表包含**：total_assets, by_category, by_stage, by_warranty, warranty_expired_count/list, warranty_expiring_count/list, fault_summary, age_distribution, change_summary, total_purchase_cost
 
+### 7.17 审批工作流接口（17个）
+
+#### 审批申请CRUD（5个）
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| GET | /api/approval-requests | approval:view | 审批列表（status/type/asset_code筛选+分页） |
+| POST | /api/approval-requests | approval:submit | 创建审批单（自动生成request_no） |
+| GET | /api/approval-requests/{request_id} | approval:view | 审批详情（含steps列表） |
+| GET | /api/approval-requests/by-asset/{asset_code} | approval:view | 按资产查询审批历史 |
+
+#### 审批操作（4个）
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| POST | /api/approval-requests/{request_id}/submit | approval:submit | 提交审批（draft→pending+前置门禁校验+创建审批链） |
+| POST | /api/approval-requests/{request_id}/action | approval:approve | 审批操作（approve/reject+多级流转判断+drive_stage_change） |
+| POST | /api/approval-requests/{request_id}/cancel | approval:cancel | 撤回审批（pending→cancelled） |
+| POST | /api/approval-requests/{request_id}/resubmit | approval:submit | 重新提交驳回审批（rejected→draft→pending） |
+
+**⚠️ 路由顺序关键**：固定路径路由（stats/my-pending/my-applications/dropdown-config/by-asset）必须在路径参数路由（{request_id}）之前定义，否则FastAPI会将"stats"匹配为request_id参数导致422错误。
+
+#### 审批查询（3个）
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| GET | /api/approval-requests/my-pending | approval:approve | 我的待审列表（按当前用户角色匹配审批步骤） |
+| GET | /api/approval-requests/my-applications | approval:submit | 我的审批申请列表 |
+| GET | /api/approval-requests/stats | approval:view | 审批统计（pending_count/approved_count/rejected_count/cancelled_count/total） |
+
+#### 审批配置（2个）
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| GET | /api/approval-requests/dropdown-config | 登录 | 审批下拉配置（审批类型+目标阶段映射） |
+| GET | /api/approval-config/types | approval:view | 审批类型配置列表 |
+
+#### 审批通知（3个）
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| GET | /api/approval-requests/notifications | approval:view | 通知列表（分页） |
+| GET | /api/approval-requests/unread-count | approval:view | 未读通知计数 |
+| POST | /api/approval-requests/notifications/{notification_id}/read | approval:view | 标记通知已读 |
+
+#### 审批操作逻辑详述
+
+**submit_approval（提交审批）**：
+1. 检查审批单状态必须为draft
+2. 前置阶段门禁校验：检查资产当前阶段是否与审批链配置的current_stage匹配
+3. 创建审批步骤链（根据APPROVAL_CHAIN_CONFIG）
+4. 自动指派审批人（根据步骤的role_code找到第一个拥有该角色的用户）
+5. 创建通知给审批人
+6. 更新状态为pending
+
+**process_approval_action（审批操作）**：
+1. 检查审批单状态必须为pending
+2. 检查当前用户是否为当前步骤的审批人
+3. 更新当前步骤状态为approved/rejected
+4. **单级审批通过**：直接更新审批单为approved + drive_stage_change
+5. **多级审批通过**：检查是否有下一级步骤 → 有则推进到下一级 → 无则整体approved
+6. **驳回**：整体rejected，所有后续步骤标记为rejected
+
+**drive_stage_change（驱动阶段变更）**：
+1. 二次校验资产当前阶段（防并发冲突）
+2. 如果current_stage == target_stage（如维保续保），跳过阶段变更，仅记录审计日志
+3. 更新Asset.lifecycle_stage = target_stage
+4. 写入AuditLog记录阶段变更
+5. 创建通知给申请人
+
 ---
 
 ## 八、业务规则
@@ -519,10 +710,12 @@ COMPLETION_STATUSES = ["进行中", "已完成", "已取消"]
 规划 → [在途, 上架]
 在途 → [上架]
 上架 → [运行]
-运行 → [维修, 待报废]
+运行 → [维修, 待报废, 在途]
 维修 → [运行, 待报废]
 待报废 → [已报废]
 ```
+
+> **注意**："运行→在途"跳转仅在变更迁移审批通过后生效，手动变更不允许此跳转。
 
 附加前置条件：
 - **跳转到"已报废"**：退役报废表必须有该资产的记录，且 application_no 不为空，data_cleared = "已清除"
@@ -548,9 +741,45 @@ COMPLETION_STATUSES = ["进行中", "已完成", "已取消"]
 | 13 | P1/P2未恢复 | error | P1/P2故障未恢复 |
 
 ### 8.3 P1/P2故障自动阶段切换
-- 创建故障记录时，如果 fault_level 为 P1 或 P2，且资产当前阶段为"运行"，自动将阶段切换为"维修"
+- 创建故障记录时，如果 fault_level 为 P1 或 P2，且资产当前阶段为"上架"或"运行"，自动将阶段切换为"维修"
+- 使用 `ACTIVE_STAGES` 常量（`["上架", "运行", "维修"]`）判断，避免魔法字符串
 
-### 8.4 采购总价自动计算
+### 8.4 审批工作流规则
+
+#### 审批状态机
+```
+draft → pending → approved / rejected / cancelled
+rejected → (resubmit) → draft → pending
+```
+
+#### 审批单号生成规则
+- 格式：`APR-YYYYMMDD-SEQ`（如 APR-20260616-001）
+- 当日递增序号，跨日重置
+
+#### P1/P2应急模式
+- P1/P2故障创建时：立即变更资产阶段为"维修"（应急优先）
+- 同步调用 `auto_submit_fault_approval()` 创建审批单做事后合规确认
+- 审批单自动从draft→pending，无需手动提交
+
+#### 阶段门禁双校验
+- **前置校验**（提交审批时）：检查资产当前阶段是否与审批链配置的current_stage匹配
+- **二次校验**（审批通过后drive_stage_change）：再次检查资产阶段是否仍满足条件，防止并发冲突
+
+#### 审批链配置说明
+- 5种单级审批（ops_manager审批即可）：采购立项/验收确认/故障降级/变更迁移/维保续保
+- 1种双级审批（ops_manager→admin）：报废退役
+- 报废退役一级通过后状态仍为pending，待二级admin审批通过后才变为approved
+
+#### 资产删除与审批关联
+- 删除资产时需同步清理审批工作流关联记录
+- 清理顺序：通知→步骤→审批单（approval_notifications→approval_steps→approval_requests）
+
+### 8.5 子表创建资产编号校验
+- 创建采购/变更/故障/维保/退役记录时，必须校验 `asset_code` 在 assets 表中存在
+- 不存在则返回 400：`资产编号 {asset_code} 不存在`
+- 防止产生孤儿记录（校验仪表盘第12项）
+
+### 8.6 采购总价自动计算
 - 创建/更新采购记录时，如果有 quantity 和 unit_price，自动计算 total_price = quantity × unit_price
 
 ---
@@ -579,6 +808,7 @@ COMPLETION_STATUSES = ["进行中", "已完成", "已取消"]
 - **左侧菜单栏**：200px宽，白色背景，分组+菜单项
   - 数据概览（仪表盘、校验仪表盘）
   - 资产管理（资产台账、采购入库、变更迁移、故障维修、维保续保、退役报废）
+  - 审批中心（审批列表、我的待审、我的申请）
   - 数据交换（批量导入、批量导出）
   - 报表统计（综合报表、维保到期、故障分析、变更频率）
   - 系统管理（用户管理、角色管理）— 仅权限用户可见
@@ -606,6 +836,14 @@ COMPLETION_STATUSES = ["进行中", "已完成", "已取消"]
 - 角色表单对话框：名称、编码、描述、权限配置（按分组展示checkbox）
 - 系统角色不可删除，有用户的角色不可删除
 
+#### 审批中心页
+- **审批列表**：状态筛选（全部/待审/已通过/已驳回/已撤回）+ 审批类型筛选 + 资产编号搜索
+- **审批详情弹窗**：基本信息 + 审批步骤链（显示每级审批人/状态/意见/时间）
+- **审批提交对话框**：选择资产编号 + 审批类型（自动关联目标阶段）+ 申请原因 + 附件
+- **审批操作区**：通过/驳回按钮（仅当前步骤审批人可见）+ 意见输入
+- **待办徽标**：导航栏显示未读审批通知数量（红色badge）
+- **通知弹窗**：点击徽标弹出通知列表，支持标记已读
+
 ### 9.3 前端权限控制
 
 ```javascript
@@ -625,7 +863,10 @@ function hasAnyPerm(...perms) {
 
 **菜单可见性控制**：
 - 系统管理菜单：需要 users:view 或 roles:view
+- 审批中心菜单：需要 approval:view
 - 各管理页面的增删改按钮：对应 create/edit/delete 权限
+- 审批提交按钮：需要 approval:submit
+- 审批通过/驳回按钮：需要 approval:approve
 - 导入导出菜单：需要 import_export:view
 
 ### 9.4 API请求封装
@@ -663,7 +904,11 @@ async function api(path, options = {}) {
 
 1. **SQLite外键**：必须在engine连接事件中执行 `PRAGMA foreign_keys=ON`
 2. **中文文件名下载**：HTTP头使用 `filename*=UTF-8''` + `urllib.parse.quote()` 编码
-3. **数据库迁移**：`Base.metadata.create_all()` 只创建不存在的表，不会修改已有表结构。如果模型变更需要删除旧 .db 文件重新创建
+3. **数据库迁移**：`Base.metadata.create_all()` 只创建不存在的表，不会修改已有表结构。如果模型变更需要删除旧 .db 文件重新创建。**数据库路径使用绝对路径**（基于 `database.py` 文件位置计算），不依赖工作目录：
+   ```python
+   _DB_DIR = os.path.dirname(os.path.abspath(__file__))
+   DATABASE_URL = f"sqlite:///{os.path.join(_DB_DIR, '..', 'asset_lifecycle.db')}"
+   ```
 4. **启动初始化**：使用 `@app.on_event("startup")` 调用 `init_default_data()` 创建默认角色和管理员
 5. **Pydantic v2**：使用 `model_validate()` 而非 `from_orm()`，使用 `model_dump()` 而非 `dict()`
 6. **分表外键**：所有分表通过 `asset_code`（而非id）关联主表 assets
@@ -671,6 +916,14 @@ async function api(path, options = {}) {
 8. **P1/P2自动切阶段**：创建故障记录时和导入时都要触发
 9. **Excel导入列名映射**：中文表头→英文字段名的映射必须准确
 10. **前端单文件**：所有CSS在 `<style>` 标签中，所有JS在 `<script>` 标签中，不拆分文件
+11. **`if __name__` 位置**：必须放在 `main.py` 文件最末尾，放在中间会导致后续接口（导入/导出/报表）无法注册
+12. **阶段常量**：`constants.py` 中定义 `ACTIVE_STAGES = ["上架", "运行", "维修"]`，业务逻辑中引用常量而非硬编码字符串
+13. **前端角色表单**：`openRoleForm()` 必须为 `async` 函数并 `await loadPermConfig()`，否则权限 checkbox 无法正确回显
+14. **FastAPI路由顺序**：固定路径路由（stats/my-pending/my-applications/dropdown-config/by-asset）必须在路径参数路由（{request_id}）之前定义，否则FastAPI将"stats"等字符串误匹配为request_id参数导致422错误
+15. **资产删除关联清理**：删除资产时必须同步清理审批工作流记录（通知→步骤→审批单），否则因外键关联导致500错误
+16. **审批单号生成**：使用数据库查询当日最大序号+1，避免并发冲突
+17. **维保续保不变阶段**：当current_stage == target_stage时（如维保续保），drive_stage_change跳过阶段变更，仅写审计日志
+18. **pytest中文引号**：测试脚本docstring中避免使用中文引号"""，改用单引号或英文双引号
 
 ---
 
@@ -688,3 +941,58 @@ async function api(path, options = {}) {
 10. ✅ viewer角色只能查看，无法创建/删除
 11. ✅ 前端菜单/按钮按权限显示/隐藏
 12. ✅ Token过期后自动跳转到登录页
+13. ✅ 审批工作流全流程：创建→提交→审批通过→阶段自动变更
+14. ✅ 审批驳回→重新提交通畅
+15. ✅ 审批撤回→状态变cancelled
+16. ✅ 多级审批（报废退役：ops_manager→admin双级）
+17. ✅ P1/P2故障自动创建审批单（应急模式）
+18. ✅ 审批通知系统正常（创建/列表/未读/标记已读）
+19. ✅ 删除资产时同步清理审批关联记录
+
+---
+
+## 十三、变更记录
+
+### v2.1.0 — 代码审核修复（2026-06-26）
+
+| # | 严重度 | 问题 | 修复方式 |
+|---|--------|------|---------|
+| 1 | 🔴 严重 | `if __name__` 位置阻断8个接口注册 | 移到 `main.py` 文件最末尾 |
+| 2 | 🔴 严重 | JWT密钥硬编码可伪造Token | 生产环境未设 `JWT_SECRET_KEY` 则拒绝启动 |
+| 3 | 🔴 严重 | 阶段门禁接口缺少认证 | 添加 `require_permission("assets:view")` |
+| 4 | 🔴 严重 | 模板下载接口缺少认证 | 添加 `require_permission("import_export:import")` |
+| 5 | 🔴 严重 | 5个子表create不校验资产编号存在性 | 统一添加 asset_code 存在性校验，返回400 |
+| 6 | 🔴 严重 | 前端角色表单权限无法回显 | `openRoleForm` 改为 `async` + `await loadPermConfig()` |
+| 7 | 🟡 重要 | 数据库路径依赖工作目录 | 改为基于 `database.py` 文件位置的绝对路径 |
+| 8 | 🟡 重要 | 生命周期阶段魔法字符串散布 | `constants.py` 新增 `ACTIVE_STAGES` 等常量，`main.py` 引用替换 |
+| 9 | 🟡 重要 | `datetime.utcnow()` 已弃用 | 改为 `datetime.now(timezone.utc)` |
+
+**回归测试**：16项全部通过（登录/认证保护/子表校验/数据库路径/代码一致性）
+
+### v2.2.0 — 审批工作流模块（2026-06-29）
+
+**新增文件**：
+- `backend/approval.py` — 审批工作流核心引擎（7核心函数）
+- `backend/constants.py` — 审批类型/状态枚举+审批链配置
+- `tests/test_approval.py` — 87项pytest单元测试
+
+**修改文件**：
+- `database.py` — +3个ORM模型(ApprovalRequest/ApprovalStep/ApprovalNotification)
+- `auth.py` — +4项审批权限(approval:view/submit/approve/cancel)+权限合并逻辑
+- `schemas.py` — +12个审批相关Pydantic类
+- `main.py` — +17个审批API端点+资产删除关联审批清理
+- `validation.py` — +运行→在途合法跳转(迁移场景)
+- `frontend/index.html` — +审批中心页面+待办徽标+通知系统
+
+**Bug修复**：
+| # | 严重度 | 问题 | 修复方式 |
+|---|--------|------|---------|
+| 1 | 🔴 严重 | FastAPI路由顺序冲突导致stats等端点422 | 固定路径路由移到{request_id}之前 |
+| 2 | 🔴 严重 | 迁移审批target_stage="变更"不在生命周期阶段 | 修正为"在途" |
+| 3 | 🟡 重要 | 维保续保target_stage="维保决策"不存在 | 修正为"运行"(不变阶段) |
+| 4 | 🟡 重要 | 阶段门禁缺少运行→在途跳转 | 添加合法跳转 |
+| 5 | 🟡 重要 | 删除资产时未清理审批关联记录导致500 | 添加通知→步骤→审批单清理 |
+
+**测试结果**：
+- 29项API集成测试 100%通过
+- 87项pytest单元测试 100%通过

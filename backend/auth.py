@@ -1,8 +1,8 @@
-"""认证与权限管理模块 - JWT + RBAC"""
+"""认证与权限管理模块 - JWT + RBAC — 新台账模板v1.0"""
 import json
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from functools import wraps
 
@@ -12,10 +12,39 @@ from sqlalchemy.orm import Session
 import jwt
 from passlib.context import CryptContext
 
+from settings import load_settings
 from database import get_db, User, Role
 
 # ============ JWT 配置 ============
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-only-change-in-production-2024")
+# 密钥优先级: 环境变量 > 配置文件(.jwt_secret) > 开发随机生成(.jwt_dev_key)
+# 生产环境必须通过环境变量或 .jwt_secret 配置文件提供固定密钥
+# 开发环境使用 .jwt_dev_key 自动生成随机密钥
+settings = load_settings()
+JWT_SECRET_KEY = settings.jwt_secret_key
+_backend_dir = os.path.dirname(os.path.abspath(__file__))
+if not JWT_SECRET_KEY:
+    # 1. 生产密钥配置文件（部署时手动写入固定密钥）
+    _prod_key_file = os.path.join(_backend_dir, ".jwt_secret")
+    if os.path.exists(_prod_key_file):
+        with open(_prod_key_file, "r") as f:
+            JWT_SECRET_KEY = f.read().strip()
+    if not JWT_SECRET_KEY:
+        if os.environ.get("ENV") == "production":
+            raise RuntimeError(
+                "生产环境必须提供 JWT 密钥:\n"
+                "  方式1: 设置环境变量 JWT_SECRET_KEY\n"
+                "  方式2: 在 backend/ 目录下创建 .jwt_secret 文件写入密钥\n"
+                "  生成密钥命令: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        # 开发环境自动生成随机密钥（每次重启不变，存在 .jwt_dev_key）
+        _dev_key_file = os.path.join(_backend_dir, ".jwt_dev_key")
+        if os.path.exists(_dev_key_file):
+            with open(_dev_key_file, "r") as f:
+                JWT_SECRET_KEY = f.read().strip()
+        if not JWT_SECRET_KEY:
+            JWT_SECRET_KEY = secrets.token_hex(32)
+            with open(_dev_key_file, "w") as f:
+                f.write(JWT_SECRET_KEY)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
@@ -38,7 +67,7 @@ def verify_password(plain_password: str, hashed: str) -> bool:
 def create_access_token(data: dict) -> str:
     """生成JWT Token"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
 
@@ -172,6 +201,16 @@ PERMISSION_DEFINITIONS = {
     "procurement:create": "新增采购记录",
     "procurement:edit": "编辑采购记录",
     "procurement:delete": "删除采购记录",
+    # 资产移入（新增）
+    "inbound:view": "查看资产移入",
+    "inbound:create": "新增移入记录",
+    "inbound:edit": "编辑移入记录",
+    "inbound:delete": "删除移入记录",
+    # 资产移出（新增）
+    "outbound:view": "查看资产移出",
+    "outbound:create": "新增移出记录",
+    "outbound:edit": "编辑移出记录",
+    "outbound:delete": "删除移出记录",
     # 变更迁移
     "change:view": "查看变更迁移",
     "change:create": "新增变更记录",
@@ -201,6 +240,14 @@ PERMISSION_DEFINITIONS = {
     "roles:create": "新增角色",
     "roles:edit": "编辑角色",
     "roles:delete": "删除角色",
+    # 审批工作流
+    "approval:view": "查看审批工作流",
+    "approval:submit": "提交/撤回审批申请",
+    "approval:approve": "审批操作（通过/驳回）",
+    "approval:cancel": "取消审批申请",
+    "approval_template:manage": "审批模板管理（编辑审批流配置）",
+    # 系统配置
+    "config:manage": "系统配置管理",
 }
 
 # 权限分组（前端展示用）
@@ -226,6 +273,14 @@ PERMISSION_GROUPS = [
         "permissions": ["procurement:view", "procurement:create", "procurement:edit", "procurement:delete"]
     },
     {
+        "name": "资产移入",
+        "permissions": ["inbound:view", "inbound:create", "inbound:edit", "inbound:delete"]
+    },
+    {
+        "name": "资产移出",
+        "permissions": ["outbound:view", "outbound:create", "outbound:edit", "outbound:delete"]
+    },
+    {
         "name": "变更迁移",
         "permissions": ["change:view", "change:create", "change:edit", "change:delete"]
     },
@@ -249,6 +304,14 @@ PERMISSION_GROUPS = [
         "name": "角色管理",
         "permissions": ["roles:view", "roles:create", "roles:edit", "roles:delete"]
     },
+    {
+        "name": "审批工作流",
+        "permissions": ["approval:view", "approval:submit", "approval:approve", "approval:cancel", "approval_template:manage"]
+    },
+    {
+        "name": "系统管理",
+        "permissions": ["config:manage"]
+    },
 ]
 
 # 预设角色
@@ -257,7 +320,7 @@ DEFAULT_ROLES = [
         "name": "系统管理员",
         "code": "admin",
         "description": "拥有系统全部权限，可管理用户和角色",
-        "permissions": list(PERMISSION_DEFINITIONS.keys()),
+        "permissions": list(PERMISSION_DEFINITIONS.keys()),  # 50项全权限
         "is_system": True
     },
     {
@@ -270,10 +333,14 @@ DEFAULT_ROLES = [
             "reports:view",
             "assets:view", "assets:create", "assets:edit", "assets:delete",
             "procurement:view", "procurement:create", "procurement:edit", "procurement:delete",
+            "inbound:view", "inbound:create", "inbound:edit", "inbound:delete",
+            "outbound:view", "outbound:create", "outbound:edit", "outbound:delete",
             "change:view", "change:create", "change:edit", "change:delete",
             "fault:view", "fault:create", "fault:edit", "fault:delete",
             "warranty:view", "warranty:create", "warranty:edit", "warranty:delete",
             "retirement:view", "retirement:create", "retirement:edit", "retirement:delete",
+            "approval:view", "approval:submit", "approval:approve", "approval:cancel",
+            "config:manage",
         ],
         "is_system": True
     },
@@ -287,10 +354,13 @@ DEFAULT_ROLES = [
             "reports:view",
             "assets:view", "assets:create", "assets:edit",
             "procurement:view", "procurement:create", "procurement:edit",
+            "inbound:view", "inbound:create",
+            "outbound:view", "outbound:create",
             "change:view", "change:create", "change:edit",
             "fault:view", "fault:create", "fault:edit",
             "warranty:view", "warranty:create", "warranty:edit",
             "retirement:view", "retirement:create", "retirement:edit",
+            "approval:view", "approval:submit",
         ],
         "is_system": True
     },
@@ -304,24 +374,32 @@ DEFAULT_ROLES = [
             "reports:view",
             "assets:view", "procurement:view", "change:view",
             "fault:view", "warranty:view", "retirement:view",
+            "inbound:view", "outbound:view",
+            "approval:view",
         ],
         "is_system": True
     },
 ]
 
-# 默认管理员账号
 DEFAULT_ADMIN = {
     "username": "admin",
-    "password": "admin123",
     "real_name": "系统管理员",
     "department": "信息中心",
     "status": "active"
 }
 
 
+def get_bootstrap_admin_password(db: Session) -> str | None:
+    existing_admin = db.query(User).filter(User.username == "admin").first()
+    password = os.environ.get("DEFAULT_ADMIN_PASSWORD", "").strip()
+    if existing_admin is None and os.environ.get("ENV", "development").lower() == "production" and not password:
+        raise RuntimeError("Production first startup requires DEFAULT_ADMIN_PASSWORD")
+    return password or None
+
+
 def init_default_data(db: Session):
-    """初始化默认角色和管理员账号"""
-    # 创建默认角色
+    """初始化默认角色和管理员账号（含权限合并逻辑）"""
+    # 创建默认角色或合并权限
     for role_data in DEFAULT_ROLES:
         existing = db.query(Role).filter(Role.code == role_data["code"]).first()
         if not existing:
@@ -333,16 +411,24 @@ def init_default_data(db: Session):
                 is_system=role_data["is_system"]
             )
             db.add(role)
+        else:
+            # 权限合并逻辑：如果已有角色权限不含新增审批权限，自动追加
+            existing_perms = json.loads(existing.permissions) if existing.permissions else []
+            new_perms = [p for p in role_data["permissions"] if p not in existing_perms]
+            if new_perms:
+                existing_perms.extend(new_perms)
+                existing.permissions = json.dumps(existing_perms, ensure_ascii=False)
 
     db.commit()
 
     # 创建默认管理员
     admin_role = db.query(Role).filter(Role.code == "admin").first()
     existing_admin = db.query(User).filter(User.username == DEFAULT_ADMIN["username"]).first()
-    if not existing_admin and admin_role:
+    bootstrap_password = get_bootstrap_admin_password(db)
+    if not existing_admin and admin_role and bootstrap_password:
         admin = User(
             username=DEFAULT_ADMIN["username"],
-            password_hash=hash_password(DEFAULT_ADMIN["password"]),
+            password_hash=hash_password(bootstrap_password),
             real_name=DEFAULT_ADMIN["real_name"],
             department=DEFAULT_ADMIN["department"],
             status=DEFAULT_ADMIN["status"]

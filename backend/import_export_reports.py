@@ -1,4 +1,4 @@
-"""批量导入导出与报表统计API模块"""
+"""批量导入导出与报表统计API模块（新台账模板v1.0）"""
 import io
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -6,41 +6,33 @@ from fastapi import UploadFile, File, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, timezone
 from typing import Optional
 from urllib.parse import quote
 
-from database import get_db, Asset, Procurement, Change, Fault, Warranty, Retirement
-from constants import (
-    CATEGORIES, LIFECYCLE_STAGES, WARRANTY_STATUSES, INSPECTION_RESULTS,
-    CHANGE_TYPES, FAULT_LEVELS, HANDLE_METHODS, ROOT_CAUSES,
-    RENEWAL_DECISIONS, RETIRE_CATEGORIES, DATA_CLEAR_OPTIONS, COMPLETION_STATUSES
-)
+from database import get_db, Asset, Procurement, Change, Fault, Warranty, Retirement, AssetInbound, AssetOutbound, record_stage_change
+from constants import LIFECYCLE_STAGES
+from config_cache import is_valid_enum, get_enum_values, FIELD_TO_GROUP_IMPORT
 
 
-# ============ 下拉选项校验映射 ============
-VALID_OPTIONS = {
-    "asset_category": CATEGORIES,
-    "lifecycle_stage": LIFECYCLE_STAGES,
-    "warranty_status": WARRANTY_STATUSES,
-    "inspection_result": INSPECTION_RESULTS,
-    "change_type": CHANGE_TYPES,
-    "fault_level": FAULT_LEVELS,
-    "handle_method": HANDLE_METHODS,
-    "root_cause": ROOT_CAUSES,
-    "renewal_decision": RENEWAL_DECISIONS,
-    "retire_category": RETIRE_CATEGORIES,
-    "data_cleared": DATA_CLEAR_OPTIONS,
-    "completion_status": COMPLETION_STATUSES,
-}
-
-
+# ============ 下拉选项校验（A-08 / O8：运行期查 DB 缓存） ============
 def validate_field(field_name: str, value: str) -> list[str]:
-    """校验字段值是否在合法选项内，返回错误列表"""
+    """校验字段值是否在系统配置已启用的合法选项内，返回错误列表。
+
+    - lifecycle_stage 保留硬编码常量（O4）。
+    - 其余可映射字段经 config_cache.is_valid_enum 校验。
+    - 无法映射的字段跳过（交由业务层处理）。
+    """
     errors = []
-    if field_name in VALID_OPTIONS and value:
-        if value not in VALID_OPTIONS[field_name]:
-            errors.append(f"字段'{field_name}'值'{value}'不在合法选项中: {VALID_OPTIONS[field_name]}")
+    if not value:
+        return errors
+    if field_name == "lifecycle_stage":
+        if value not in LIFECYCLE_STAGES:
+            errors.append(f"字段'{field_name}'值'{value}'不在合法选项中: {LIFECYCLE_STAGES}")
+        return errors
+    if field_name in FIELD_TO_GROUP_IMPORT:
+        if not is_valid_enum(FIELD_TO_GROUP_IMPORT[field_name], value):
+            errors.append(f"字段'{field_name}'值'{value}'不在系统配置已启用的选项中")
     return errors
 
 
@@ -51,18 +43,20 @@ async def import_assets_excel(file: UploadFile, db: Session):
     wb = openpyxl.load_workbook(io.BytesIO(content))
     ws = wb.active
 
-    # 读取表头
     headers = []
     for cell in ws[1]:
         headers.append(str(cell.value).strip() if cell.value else "")
 
-    # 期望的列名映射
     expected_cols = {
         "资产编号": "asset_code", "资产分类": "asset_category", "品牌": "brand",
-        "型号": "model", "SN号": "sn", "位置": "location",
+        "型号": "model", "SN号": "sn", "机房": "room",
+        "机柜": "cabinet", "U位": "u_position",
         "生命周期阶段": "lifecycle_stage", "入场日期": "entry_date",
         "责任人": "responsible_person", "维保状态": "warranty_status",
-        "维保到期日": "warranty_expire_date", "IP地址": "ip_address", "备注": "remarks"
+        "维保到期日": "warranty_expire_date", "备注": "remarks",
+        "设备名称": "device_name", "项目名称": "project_name",
+        "产权归属": "ownership", "所属部门": "department",
+        "原值(元)": "original_value",
     }
 
     col_map = {}
@@ -70,7 +64,6 @@ async def import_assets_excel(file: UploadFile, db: Session):
         if h in expected_cols:
             col_map[expected_cols[h]] = i
 
-    # 必须有资产编号和分类列
     if "asset_code" not in col_map or "asset_category" not in col_map:
         raise HTTPException(400, "Excel缺少必要列：资产编号、资产分类")
 
@@ -83,22 +76,32 @@ async def import_assets_excel(file: UploadFile, db: Session):
             continue
 
         data = {}
+        asset_date_fields = {"entry_date", "warranty_expire_date"}
+        asset_numeric_fields = {"original_value"}
         for field, col_idx in col_map.items():
             val = row[col_idx] if col_idx < len(row) else None
             if val is not None:
                 if isinstance(val, datetime):
-                    data[field] = val.strftime("%Y-%m-%d")
+                    data[field] = val.date()
                 elif isinstance(val, date):
-                    data[field] = val.strftime("%Y-%m-%d")
+                    data[field] = val
+                elif field in asset_date_fields:
+                    try:
+                        data[field] = datetime.strptime(str(val).strip(), "%Y-%m-%d").date()
+                    except (ValueError, TypeError):
+                        data[field] = str(val).strip()
+                elif field in asset_numeric_fields:
+                    try:
+                        data[field] = float(val)
+                    except (ValueError, TypeError):
+                        data[field] = 0.0
                 else:
                     data[field] = str(val).strip()
 
-        # 字段校验
         row_errors = []
         for field, value in data.items():
             row_errors.extend(validate_field(field, value))
 
-        # 检查编号唯一性
         code = data.get("asset_code", "")
         existing = db.query(Asset).filter(Asset.asset_code == code).first()
         if existing:
@@ -110,7 +113,6 @@ async def import_assets_excel(file: UploadFile, db: Session):
             errors.append(f"行{row_idx}: {'; '.join(row_errors)}")
             continue
 
-        # 必填字段默认值
         if "lifecycle_stage" not in data:
             data["lifecycle_stage"] = "规划"
 
@@ -118,14 +120,12 @@ async def import_assets_excel(file: UploadFile, db: Session):
             asset = Asset(**data)
             db.add(asset)
             success_count += 1
-            # 每100行提交一次
             if success_count % 100 == 0:
                 db.commit()
         except Exception as e:
             db.rollback()
             errors.append(f"行{row_idx}: 写入失败 - {str(e)}")
 
-    # 提交剩余的记录
     try:
         db.commit()
     except Exception as e:
@@ -141,33 +141,35 @@ async def import_assets_excel(file: UploadFile, db: Session):
 
 
 async def import_subtable_excel(file: UploadFile, table_type: str, db: Session):
-    """批量导入分表数据（采购/变更/故障/维保/退役）"""
+    """批量导入分表数据"""
     content = await file.read()
     wb = openpyxl.load_workbook(io.BytesIO(content))
     ws = wb.active
 
     model_map = {
         "procurement": (Procurement, {
-            "资产编号": "asset_code", "采购单号": "purchase_order", "合同号": "contract_no",
-            "供应商": "supplier", "数量": "quantity", "单价": "unit_price",
-            "总价": "total_price", "到货日期": "arrival_date", "验收人": "inspector",
-            "验收结果": "inspection_result", "上架日期": "install_date", "备注": "remarks"
+            "资产编号": "asset_code", "采购申请编号": "request_no", "供应商": "vendor",
+            "设备名称": "device_name", "配置参数摘要": "config_summary",
+            "申请日期": "request_date", "申请人": "applicant",
+            "审批状态": "approval_status", "数量": "quantity", "单价": "unit_price",
+            "总价": "total_price", "备注": "remarks"
         }),
         "change": (Change, {
-            "资产编号": "asset_code", "变更类型": "change_type", "原位置": "old_location",
-            "新位置": "new_location", "原IP": "old_ip", "新IP": "new_ip",
-            "原责任人": "old_responsible", "新责任人": "new_responsible",
+            "资产编号": "asset_code", "变更类型": "change_type", "工单编号": "work_order_no",
+            "变更内容": "change_content", "原配置": "old_config", "新配置": "new_config",
             "变更原因": "change_reason", "审批人": "approver", "执行人": "executor",
             "执行日期": "execute_date", "完成状态": "completion_status", "备注": "remarks"
         }),
         "fault": (Fault, {
-            "资产编号": "asset_code", "故障等级": "fault_level", "故障现象": "fault_description",
-            "故障日期": "fault_date", "维修人": "repair_person", "处理方式": "handle_method",
-            "配件更换": "parts_replaced", "根因分类": "root_cause", "恢复日期": "recovery_date",
-            "停机时长": "downtime_hours", "是否复发": "is_recurring", "备注": "remarks"
+            "资产编号": "asset_code", "故障等级": "fault_level", "故障单号": "fault_no",
+            "故障现象": "fault_description", "故障日期": "fault_date", "维修人": "repair_person",
+            "处理方式": "handle_method", "配件更换": "parts_replaced", "根因分类": "root_cause",
+            "恢复日期": "recovery_date", "停机时长": "downtime_hours", "维修费用": "repair_cost",
+            "是否复发": "is_recurring", "备注": "remarks"
         }),
         "warranty": (Warranty, {
-            "资产编号": "asset_code", "合同编号": "contract_no", "覆盖范围": "coverage",
+            "资产编号": "asset_code", "维保单号": "warranty_no", "维保类型": "warranty_type",
+            "维保供应商": "warranty_vendor", "合同编号": "contract_no", "覆盖范围": "coverage",
             "维保起始日": "start_date", "维保到期日": "end_date", "续保决策": "renewal_decision",
             "决策人": "decision_person", "决策日期": "decision_date",
             "续保合同号": "renewal_contract_no", "续保起始日": "renewal_start_date",
@@ -179,6 +181,22 @@ async def import_subtable_excel(file: UploadFile, table_type: str, db: Session):
             "下架日期": "uninstall_date", "下架人": "uninstall_person",
             "数据清除确认": "data_cleared", "数据清除人": "data_clear_person",
             "处置方式": "disposal_method", "残值回收": "residual_value", "备注": "remarks"
+        }),
+        "inbound": (AssetInbound, {
+            "资产编号": "asset_code", "移入单号": "inbound_no", "接收类型": "receive_type",
+            "产权归属": "ownership", "产权方公司": "owner_company", "项目名称": "project_name",
+            "项目序号": "project_no", "资产分类": "asset_category", "品牌": "brand",
+            "型号": "model", "SN序列号": "sn", "配置参数摘要": "config_summary",
+            "采购合同编号": "purchase_contract_no", "采购总价": "purchase_total_price",
+            "移入日期": "inbound_date", "接收人": "receiver",
+            "验收结果": "inspection_result", "存放位置": "storage_location", "备注": "remarks"
+        }),
+        "outbound": (AssetOutbound, {
+            "资产编号": "asset_code", "移出单号": "outbound_no", "移出原因": "outbound_reason",
+            "移出类别": "outbound_category", "去向/目的地": "destination",
+            "移出日期": "outbound_date", "接收方联系人": "receiver_contact",
+            "接收方联系电话": "receiver_phone", "操作人": "operator",
+            "审批人": "approver", "备注": "remarks"
         }),
     }
 
@@ -204,14 +222,28 @@ async def import_subtable_excel(file: UploadFile, table_type: str, db: Session):
             continue
 
         data = {}
+        # 日期字段列表（需将字符串转为Python date对象）
+        date_fields = {
+            "entry_date", "warranty_expire_date",
+            "request_date", "fault_date", "recovery_date", "execute_date",
+            "start_date", "end_date", "decision_date", "renewal_start_date", "renewal_end_date",
+            "approval_date", "uninstall_date",
+            "inbound_date", "outbound_date",
+        }
         for field, col_idx in col_map.items():
             val = row[col_idx] if col_idx < len(row) else None
             if val is not None:
                 if isinstance(val, datetime):
-                    data[field] = val.strftime("%Y-%m-%d")
+                    data[field] = val.date()
                 elif isinstance(val, date):
-                    data[field] = val.strftime("%Y-%m-%d")
-                elif field in ("quantity", "unit_price", "total_price", "downtime_hours", "cost", "residual_value"):
+                    data[field] = val
+                elif field in date_fields:
+                    # 字符串日期转为Python date对象
+                    try:
+                        data[field] = datetime.strptime(str(val).strip(), "%Y-%m-%d").date()
+                    except (ValueError, TypeError):
+                        data[field] = str(val).strip()
+                elif field in ("quantity", "unit_price", "total_price", "downtime_hours", "cost", "residual_value", "repair_cost", "purchase_total_price"):
                     try:
                         data[field] = float(val)
                         if field == "quantity":
@@ -223,7 +255,6 @@ async def import_subtable_excel(file: UploadFile, table_type: str, db: Session):
                 else:
                     data[field] = str(val).strip()
 
-        # 校验
         row_errors = []
         for field, value in data.items():
             if isinstance(value, str):
@@ -236,20 +267,23 @@ async def import_subtable_excel(file: UploadFile, table_type: str, db: Session):
         try:
             item = Model(**data)
             db.add(item)
-            # P1/P2故障自动切换主表阶段
-            if table_type == "fault" and data.get("fault_level") in ("P1", "P2"):
+            if table_type == "fault" and data.get("fault_level") in ("P1", "P2-严重"):
                 asset = db.query(Asset).filter(Asset.asset_code == data.get("asset_code")).first()
                 if asset and asset.lifecycle_stage in ["运行", "上架"]:
+                    orig_stage = asset.lifecycle_stage
                     asset.lifecycle_stage = "维修"
+                    record_stage_change(
+                        db, asset.asset_code, orig_stage, "维修",
+                        datetime.now(timezone.utc), operator="system_import",
+                        reason="Excel导入故障降级", is_backfill=False
+                    )
             success_count += 1
-            # 每100行提交一次
             if success_count % 100 == 0:
                 db.commit()
         except Exception as e:
             db.rollback()
             errors.append(f"行{row_idx}: 写入失败 - {str(e)}")
 
-    # 提交剩余的记录
     try:
         db.commit()
     except Exception as e:
@@ -282,7 +316,9 @@ def export_assets_excel(
             Asset.brand.ilike(search_pattern),
             Asset.model.ilike(search_pattern),
             Asset.sn.ilike(search_pattern),
-            Asset.location.ilike(search_pattern),
+            Asset.room.ilike(search_pattern),
+            Asset.device_name.ilike(search_pattern),
+            Asset.responsible_person.ilike(search_pattern),
         ))
 
     assets = query.order_by(Asset.asset_code).all()
@@ -291,7 +327,6 @@ def export_assets_excel(
     ws = wb.active
     ws.title = "资产台账主索引"
 
-    # 样式定义
     header_font = Font(name="微软雅黑", size=11, bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="0052D9", end_color="0052D9", fill_type="solid")
     cell_font = Font(name="微软雅黑", size=10)
@@ -303,9 +338,9 @@ def export_assets_excel(
     red_fill = PatternFill(start_color="FDE8E8", end_color="FDE8E8", fill_type="solid")
     yellow_fill = PatternFill(start_color="FFF7E8", end_color="FFF7E8", fill_type="solid")
 
-    headers_list = ["资产编号", "资产分类", "品牌", "型号", "SN号", "位置",
-                    "生命周期阶段", "入场日期", "责任人", "维保状态",
-                    "维保到期日", "IP地址", "备注"]
+    headers_list = ["资产编号", "资产分类", "品牌", "型号", "SN号", "机房",
+                    "机柜", "U位", "生命周期阶段", "入场日期", "责任人", "维保状态",
+                    "维保到期日", "设备名称", "项目名称", "产权归属", "原值(元)", "备注"]
 
     for col, h in enumerate(headers_list, 1):
         cell = ws.cell(row=1, column=col, value=h)
@@ -317,11 +352,12 @@ def export_assets_excel(
     today = date.today()
     for row_idx, a in enumerate(assets, 2):
         values = [
-            a.asset_code, a.asset_category, a.brand, a.model, a.sn, a.location,
-            a.lifecycle_stage, str(a.entry_date) if a.entry_date else "",
+            a.asset_code, a.asset_category, a.brand, a.model, a.sn, a.room,
+            a.cabinet, a.u_position, a.lifecycle_stage, str(a.entry_date) if a.entry_date else "",
             a.responsible_person, a.warranty_status,
             str(a.warranty_expire_date) if a.warranty_expire_date else "",
-            a.ip_address, a.remarks or ""
+            a.device_name or "", a.project_name or "", a.ownership or "",
+            round(float(a.original_value or 0), 2), a.remarks or ""
         ]
         for col, val in enumerate(values, 1):
             cell = ws.cell(row=row_idx, column=col, value=val)
@@ -329,16 +365,14 @@ def export_assets_excel(
             cell.alignment = center_align
             cell.border = thin_border
 
-        # 维保告警条件格式
         if a.warranty_expire_date and a.lifecycle_stage in ("上架", "运行", "维修"):
             if a.warranty_expire_date < today:
                 for col in range(1, len(headers_list) + 1):
                     ws.cell(row=row_idx, column=col).fill = red_fill
             elif a.warranty_expire_date < today + timedelta(days=30):
-                ws.cell(row=row_idx, column=11).fill = yellow_fill
+                ws.cell(row=row_idx, column=13).fill = yellow_fill
 
-    # 设置列宽
-    col_widths = [16, 12, 10, 16, 16, 14, 14, 12, 10, 10, 12, 14, 20]
+    col_widths = [16, 12, 10, 16, 16, 14, 14, 12, 14, 12, 10, 10, 12, 14, 14, 10, 14, 20]
     for i, w in enumerate(col_widths, 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
 
@@ -358,26 +392,29 @@ def export_subtable_excel(db: Session, table_type: str) -> StreamingResponse:
     """导出分表为Excel"""
     table_config = {
         "procurement": (Procurement, "采购入库", [
-            ("资产编号", "asset_code"), ("采购单号", "purchase_order"), ("合同号", "contract_no"),
-            ("供应商", "supplier"), ("数量", "quantity"), ("单价", "unit_price"),
-            ("总价", "total_price"), ("到货日期", "arrival_date"), ("验收人", "inspector"),
-            ("验收结果", "inspection_result"), ("上架日期", "install_date"), ("备注", "remarks")
+            ("资产编号", "asset_code"), ("采购申请编号", "request_no"), ("供应商", "vendor"),
+            ("设备名称", "device_name"), ("配置参数摘要", "config_summary"),
+            ("申请日期", "request_date"), ("申请人", "applicant"),
+            ("审批状态", "approval_status"), ("数量", "quantity"), ("单价", "unit_price"),
+            ("总价", "total_price"), ("备注", "remarks")
         ]),
         "change": (Change, "变更迁移", [
-            ("资产编号", "asset_code"), ("变更类型", "change_type"), ("原位置", "old_location"),
-            ("新位置", "new_location"), ("原IP", "old_ip"), ("新IP", "new_ip"),
-            ("原责任人", "old_responsible"), ("新责任人", "new_responsible"),
+            ("资产编号", "asset_code"), ("变更类型", "change_type"), ("工单编号", "work_order_no"),
+            ("变更内容", "change_content"), ("原配置", "old_config"), ("新配置", "new_config"),
             ("变更原因", "change_reason"), ("审批人", "approver"), ("执行人", "executor"),
             ("执行日期", "execute_date"), ("完成状态", "completion_status"), ("备注", "remarks")
         ]),
         "fault": (Fault, "故障维修", [
-            ("资产编号", "asset_code"), ("故障等级", "fault_level"), ("故障现象", "fault_description"),
-            ("故障日期", "fault_date"), ("维修人", "repair_person"), ("处理方式", "handle_method"),
-            ("配件更换", "parts_replaced"), ("根因分类", "root_cause"), ("恢复日期", "recovery_date"),
-            ("停机时长", "downtime_hours"), ("是否复发", "is_recurring"), ("备注", "remarks")
+            ("资产编号", "asset_code"), ("故障等级", "fault_level"), ("故障单号", "fault_no"),
+            ("故障现象", "fault_description"), ("故障日期", "fault_date"),
+            ("维修人", "repair_person"), ("处理方式", "handle_method"),
+            ("配件更换", "parts_replaced"), ("根因分类", "root_cause"),
+            ("恢复日期", "recovery_date"), ("停机时长", "downtime_hours"),
+            ("维修费用", "repair_cost"), ("是否复发", "is_recurring"), ("备注", "remarks")
         ]),
         "warranty": (Warranty, "维保续保", [
-            ("资产编号", "asset_code"), ("合同编号", "contract_no"), ("覆盖范围", "coverage"),
+            ("资产编号", "asset_code"), ("维保单号", "warranty_no"), ("维保类型", "warranty_type"),
+            ("维保供应商", "warranty_vendor"), ("合同编号", "contract_no"), ("覆盖范围", "coverage"),
             ("维保起始日", "start_date"), ("维保到期日", "end_date"), ("续保决策", "renewal_decision"),
             ("决策人", "decision_person"), ("决策日期", "decision_date"),
             ("续保合同号", "renewal_contract_no"), ("续保起始日", "renewal_start_date"),
@@ -389,6 +426,22 @@ def export_subtable_excel(db: Session, table_type: str) -> StreamingResponse:
             ("下架日期", "uninstall_date"), ("下架人", "uninstall_person"),
             ("数据清除确认", "data_cleared"), ("数据清除人", "data_clear_person"),
             ("处置方式", "disposal_method"), ("残值回收", "residual_value"), ("备注", "remarks")
+        ]),
+        "inbound": (AssetInbound, "资产移入", [
+            ("资产编号", "asset_code"), ("移入单号", "inbound_no"), ("接收类型", "receive_type"),
+            ("产权归属", "ownership"), ("产权方公司", "owner_company"), ("项目名称", "project_name"),
+            ("项目序号", "project_no"), ("资产分类", "asset_category"), ("品牌", "brand"),
+            ("型号", "model"), ("SN序列号", "sn"), ("配置参数摘要", "config_summary"),
+            ("采购合同编号", "purchase_contract_no"), ("采购总价", "purchase_total_price"),
+            ("移入日期", "inbound_date"), ("接收人", "receiver"),
+            ("验收结果", "inspection_result"), ("存放位置", "storage_location"), ("备注", "remarks")
+        ]),
+        "outbound": (AssetOutbound, "资产移出", [
+            ("资产编号", "asset_code"), ("移出单号", "outbound_no"), ("移出原因", "outbound_reason"),
+            ("移出类别", "outbound_category"), ("去向/目的地", "destination"),
+            ("移出日期", "outbound_date"), ("接收方联系人", "receiver_contact"),
+            ("接收方联系电话", "receiver_phone"), ("操作人", "operator"),
+            ("审批人", "approver"), ("备注", "remarks")
         ]),
     }
 
@@ -427,12 +480,10 @@ def export_subtable_excel(db: Session, table_type: str) -> StreamingResponse:
             cell.alignment = center_align
             cell.border = thin_border
 
-            # P1/P2故障标红
-            if table_type == "fault" and field == "fault_level" and val in ("P1", "P2"):
+            if table_type == "fault" and field == "fault_level" and val in ("P1", "P2-严重"):
                 cell.fill = PatternFill(start_color="FDE8E8", end_color="FDE8E8", fill_type="solid")
                 cell.font = Font(name="微软雅黑", size=10, bold=True, color="E34D59")
 
-    # 列宽
     for col in range(1, len(col_defs) + 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 14
 
@@ -455,41 +506,60 @@ def download_import_template(table_type: str) -> StreamingResponse:
 
     template_config = {
         "assets": ("资产台账导入模板", [
-            ("资产编号*", "资产分类*", "品牌", "型号", "SN号", "位置",
-             "生命周期阶段", "入场日期", "责任人", "维保状态", "维保到期日", "IP地址", "备注"),
-            [("DC-CL-SRV-001", "服务器", "Dell", "R740", "SN001", "A01-R03-U15",
-              "规划", "2026-01-15", "张三", "在保", "2029-01-15", "192.168.1.1", "示例数据")]
+            ("资产编号*", "资产分类*", "品牌", "型号", "SN号", "机房",
+             "机柜", "U位", "生命周期阶段", "入场日期", "责任人", "维保状态",
+             "维保到期日", "设备名称", "项目名称", "产权归属", "原值(元)", "备注"),
+            [("DC-CL-SRV-001", "服务器", "Dell", "R740", "SN001", "5-4机房",
+              "R-03", "15-16U", "规划", "2026-01-15", "张三", "在保",
+              "2029-01-15", "核心交换机", "数据中心项目", "自有", 50000, "示例数据")]
         ]),
         "procurement": ("采购入库导入模板", [
-            ("资产编号*", "采购单号", "合同号", "供应商", "数量", "单价",
-             "总价", "到货日期", "验收人", "验收结果", "上架日期", "备注"),
-            [("DC-CL-SRV-001", "PO-2026-001", "CT-2026-001", "戴尔科技", 1, 50000,
-             50000, "2026-01-10", "李四", "合格", "2026-01-15", "示例")]
+            ("资产编号*", "采购申请编号", "供应商", "设备名称", "配置参数摘要",
+             "申请日期", "申请人", "审批状态", "数量", "单价", "总价", "备注"),
+            [("DC-CL-SRV-001", "PR-2026-001", "戴尔科技", "PowerEdge R740",
+             "2*E5-2680v4/64G/2*600G SSD", "2026-01-10", "李四", "审批中",
+             1, 50000, 50000, "示例")]
         ]),
         "change": ("变更迁移导入模板", [
-            ("资产编号*", "变更类型", "原位置", "新位置", "原IP", "新IP",
-             "原责任人", "新责任人", "变更原因", "审批人", "执行人", "执行日期", "完成状态", "备注"),
-            [("DC-CL-SRV-001", "位置变更", "A01-R03-U15", "B02-R01-U10",
-             "192.168.1.1", "192.168.2.1", "张三", "李四", "机房调整", "运维主管", "王五",
+            ("资产编号*", "变更类型", "工单编号", "变更内容", "原配置", "新配置",
+             "变更原因", "审批人", "执行人", "执行日期", "完成状态", "备注"),
+            [("DC-CL-SVR-001", "配置变更", "WO-2026-001", "内存扩容",
+             "64G", "128G", "业务增长需要", "运维主管", "王五",
              "2026-06-01", "已完成", "示例")]
         ]),
         "fault": ("故障维修导入模板", [
-            ("资产编号*", "故障等级", "故障现象", "故障日期", "维修人", "处理方式",
-             "配件更换", "根因分类", "恢复日期", "停机时长", "是否复发", "备注"),
-            [("DC-CL-SRV-001", "P3", "端口故障", "2026-06-01", "王五", "现场修复",
-             "无", "硬件故障", "2026-06-02", 4, "否", "示例")]
+            ("资产编号*", "故障等级", "故障单号", "故障现象", "故障日期", "维修人", "处理方式",
+             "配件更换", "根因分类", "恢复日期", "停机时长", "维修费用", "是否复发", "备注"),
+            [("DC-CL-SVR-001", "P3", "FLT-2026-001", "端口故障", "2026-06-01", "王五", "现场修复",
+             "无", "硬件故障", "2026-06-02", 4, 500, "否", "示例")]
         ]),
         "warranty": ("维保续保导入模板", [
-            ("资产编号*", "合同编号", "覆盖范围", "维保起始日", "维保到期日", "续保决策",
+            ("资产编号*", "维保单号", "维保类型", "维保供应商", "合同编号", "覆盖范围",
+             "维保起始日", "维保到期日", "续保决策",
              "决策人", "决策日期", "续保合同号", "续保起始日", "续保到期日", "维保费用", "备注"),
-            [("DC-CL-SRV-001", "WB-2026-001", "整机维保", "2026-01-15", "2029-01-15", "续保",
+            [("DC-CL-SVR-001", "WB-2026-001", "整机维保", "戴尔科技", "CT-2026-001", "整机维保",
+             "2026-01-15", "2029-01-15", "续保",
              "运维主管", "2026-01-01", "WB-2029-001", "2029-01-15", "2032-01-15", 5000, "示例")]
         ]),
         "retirement": ("退役报废导入模板", [
             ("资产编号*", "报废原因", "报废类别", "申请单号", "审批人", "审批日期",
              "下架日期", "下架人", "数据清除确认", "数据清除人", "处置方式", "残值回收", "备注"),
-            [("DC-CL-SRV-001", "设备老化", "正常报废", "RF-2026-001", "运维主管", "2026-06-01",
+            [("DC-CL-SVR-001", "设备老化", "报废", "RF-2026-001", "运维主管", "2026-06-01",
              "2026-06-05", "王五", "已清除", "安全负责人", "回收商处理", 500, "示例")]
+        ]),
+        "inbound": ("资产移入导入模板", [
+            ("资产编号*", "移入单号", "接收类型", "产权归属", "产权方公司", "项目名称",
+             "项目序号", "资产分类", "品牌", "型号", "SN序列号", "配置参数摘要",
+             "采购合同编号", "采购总价", "移入日期", "接收人", "验收结果", "存放位置", "备注"),
+            [("DC-CL-SVR-001", "IN-2026-001", "采购入库", "自有", "长乐数据中心", "数据中心扩容",
+             "PRJ-001", "服务器", "Dell", "PowerEdge R740", "SN-IN001", "2*E5-2680v4/64G",
+             "CT-2026-001", 50000, "2026-01-15", "张三", "合格", "5-4机房 R-03", "示例")]
+        ]),
+        "outbound": ("资产移出导入模板", [
+            ("资产编号*", "移出单号", "移出原因", "移出类别", "去向/目的地",
+             "移出日期", "接收方联系人", "接收方联系电话", "操作人", "审批人", "备注"),
+            [("DC-CL-SVR-001", "OUT-2026-001", "设备老化报废", "报废", "回收商",
+             "2026-06-05", "李经理", "13800138000", "王五", "运维主管", "示例")]
         ]),
     }
 
@@ -513,22 +583,24 @@ def download_import_template(table_type: str) -> StreamingResponse:
         cell.alignment = center_align
         cell.border = thin_border
 
-    # 提示行（合法选项说明）
     tip_map_assets = {
-        2: "/".join(CATEGORIES),
+        2: "/".join(get_enum_values("category")),
         7: "/".join(LIFECYCLE_STAGES),
-        10: "/".join(WARRANTY_STATUSES),
+        10: "/".join(get_enum_values("warranty_status")),
     }
-    tip_map_proc = {10: "/".join(INSPECTION_RESULTS)}
-    tip_map_fault = {2: "/".join(FAULT_LEVELS), 6: "/".join(HANDLE_METHODS), 8: "/".join(ROOT_CAUSES)}
-    tip_map_warranty = {6: "/".join(RENEWAL_DECISIONS)}
-    tip_map_retirement = {3: "/".join(RETIRE_CATEGORIES), 9: "/".join(DATA_CLEAR_OPTIONS)}
-    tip_map_change = {2: "/".join(CHANGE_TYPES), 13: "/".join(COMPLETION_STATUSES)}
+    tip_map_proc = {10: "/".join(get_enum_values("procurement_approval_status"))}
+    tip_map_fault = {2: "/".join(get_enum_values("fault_level")), 6: "/".join(get_enum_values("handle_method")), 8: "/".join(get_enum_values("root_cause"))}
+    tip_map_warranty = {6: "/".join(get_enum_values("renewal_decision"))}
+    tip_map_retirement = {3: "/".join(get_enum_values("retire_category")), 9: "/".join(get_enum_values("data_clear_option"))}
+    tip_map_change = {2: "/".join(get_enum_values("change_type")), 13: "/".join(get_enum_values("completion_status"))}
+    tip_map_inbound = {3: "/".join(get_enum_values("receive_type")), 4: "/".join(get_enum_values("ownership_type")), 8: "/".join(get_enum_values("category")), 17: "/".join(get_enum_values("inbound_inspection_result"))}
+    tip_map_outbound = {4: "/".join(get_enum_values("outbound_category"))}
 
     all_tip_maps = {
         "assets": tip_map_assets, "procurement": tip_map_proc,
         "fault": tip_map_fault, "warranty": tip_map_warranty,
         "retirement": tip_map_retirement, "change": tip_map_change,
+        "inbound": tip_map_inbound, "outbound": tip_map_outbound,
     }
     current_tips = all_tip_maps.get(table_type, {})
 
@@ -537,7 +609,6 @@ def download_import_template(table_type: str) -> StreamingResponse:
         cell.font = tip_font
         cell.fill = PatternFill(start_color="F3F5F8", end_color="F3F5F8", fill_type="solid")
 
-    # 示例数据行
     for col, val in enumerate(examples[0], 1):
         cell = ws.cell(row=3, column=col, value=val)
         cell.font = cell_font
@@ -545,13 +616,11 @@ def download_import_template(table_type: str) -> StreamingResponse:
         cell.border = thin_border
         cell.fill = PatternFill(start_color="E8F0FE", end_color="E8F0FE", fill_type="solid")
 
-    # 空行（供用户填写）
     for row in range(4, 24):
         for col in range(1, len(headers) + 1):
             cell = ws.cell(row=row, column=col, value="")
             cell.border = thin_border
 
-    # 列宽
     for col in range(1, len(headers) + 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 16
 
@@ -577,7 +646,6 @@ def get_comprehensive_report(db: Session):
     by_stage = dict(db.query(Asset.lifecycle_stage, func.count(Asset.id)).group_by(Asset.lifecycle_stage).all())
     by_warranty = dict(db.query(Asset.warranty_status, func.count(Asset.id)).group_by(Asset.warranty_status).all())
 
-    # 维保过期/即将过期
     warranty_expired = db.query(Asset).filter(
         Asset.warranty_expire_date < today,
         Asset.lifecycle_stage.in_(["上架", "运行", "维修"])
@@ -587,14 +655,12 @@ def get_comprehensive_report(db: Session):
         Asset.lifecycle_stage.in_(["上架", "运行", "维修"])
     ).all()
 
-    # 故障概览
     total_faults = db.query(Fault).count()
     by_fault_level = dict(db.query(Fault.fault_level, func.count(Fault.id)).group_by(Fault.fault_level).all())
     by_root_cause = dict(db.query(Fault.root_cause, func.count(Fault.id)).group_by(Fault.root_cause).all())
     unresolved = db.query(Fault).filter(Fault.recovery_date == None).count()
     avg_downtime = db.query(func.avg(Fault.downtime_hours)).filter(Fault.downtime_hours != None).scalar() or 0
 
-    # 资产年龄分布
     age_buckets = {"0-1年": 0, "1-3年": 0, "3-5年": 0, "5-8年": 0, "8年以上": 0}
     for a in db.query(Asset).filter(Asset.entry_date != None).all():
         if a.entry_date:
@@ -606,11 +672,9 @@ def get_comprehensive_report(db: Session):
             elif age_years < 8: age_buckets["5-8年"] += 1
             else: age_buckets["8年以上"] += 1
 
-    # 变更频率
     by_change_type = dict(db.query(Change.change_type, func.count(Change.id)).group_by(Change.change_type).all())
     total_changes = db.query(Change).count()
 
-    # 采购总额
     total_purchase_cost = db.query(func.sum(Procurement.total_price)).scalar() or 0
 
     return {
@@ -640,21 +704,19 @@ def get_warranty_expiry_report(db: Session, days: int = 90):
     today = date.today()
     cutoff = today + timedelta(days=days)
 
-    # 已过期
     expired = db.query(Asset).filter(
         Asset.warranty_expire_date < today,
         Asset.lifecycle_stage.in_(["上架", "运行", "维修"])
     ).all()
 
-    # 即将到期
     expiring = db.query(Asset).filter(
         Asset.warranty_expire_date.between(today, cutoff),
         Asset.lifecycle_stage.in_(["上架", "运行", "维修"])
     ).all()
 
     return {
-        "expired": [{"asset_code": a.asset_code, "category": a.asset_category, "brand": a.brand, "model": a.model, "location": a.location, "responsible_person": a.responsible_person, "warranty_status": a.warranty_status, "warranty_expire_date": str(a.warranty_expire_date), "days_overdue": (today - a.warranty_expire_date).days} for a in expired],
-        "expiring": [{"asset_code": a.asset_code, "category": a.asset_category, "brand": a.brand, "model": a.model, "location": a.location, "responsible_person": a.responsible_person, "warranty_status": a.warranty_status, "warranty_expire_date": str(a.warranty_expire_date), "days_left": (a.warranty_expire_date - today).days} for a in expiring],
+        "expired": [{"asset_code": a.asset_code, "category": a.asset_category, "brand": a.brand, "model": a.model, "room": a.room, "cabinet": a.cabinet, "responsible_person": a.responsible_person, "warranty_status": a.warranty_status, "warranty_expire_date": str(a.warranty_expire_date), "days_overdue": (today - a.warranty_expire_date).days} for a in expired],
+        "expiring": [{"asset_code": a.asset_code, "category": a.asset_category, "brand": a.brand, "model": a.model, "room": a.room, "cabinet": a.cabinet, "responsible_person": a.responsible_person, "warranty_status": a.warranty_status, "warranty_expire_date": str(a.warranty_expire_date), "days_left": (a.warranty_expire_date - today).days} for a in expiring],
         "expired_count": len(expired),
         "expiring_count": len(expiring),
     }
@@ -689,10 +751,8 @@ def get_fault_analysis_report(db: Session, start_date: Optional[str] = None, end
         if f.is_recurring:
             recurring_count += 1
 
-    # 故障设备排行（故障次数前10）
     top_fault_assets = sorted(by_asset.items(), key=lambda x: x[1], reverse=True)[:10]
 
-    # 未恢复故障
     unresolved_by_level = {}
     for f in db.query(Fault).filter(Fault.recovery_date == None).all():
         unresolved_by_level[f.fault_level] = unresolved_by_level.get(f.fault_level, 0) + 1
@@ -719,7 +779,6 @@ def get_change_frequency_report(db: Session):
         month_key = c.execute_date.strftime("%Y-%m")
         by_month[month_key] = by_month.get(month_key, 0) + 1
 
-    # 按月排序
     by_month = dict(sorted(by_month.items()))
 
     by_asset = {}

@@ -1,0 +1,524 @@
+[
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "创建资产(含23新字段)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "23新字段完整保存",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "获取资产列表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "搜索资产(新字段room/device_name/ownership)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "获取单个资产详情",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "更新资产5个新字段完整正确",
+    "status": "FAIL",
+    "detail": "status=422, error=HTTP Error 422: Unprocessable Content"
+  },
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "ip_address字段已移除",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "创建上架阶段测试资产(用于门禁)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "创建运行阶段测试资产(用于报废联动)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Asset",
+    "name": "创建运行阶段测试资产(用于故障降级)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Procurement",
+    "name": "创建采购(asset_code为Optional)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Procurement",
+    "name": "创建采购(带asset_code关联) - API成功",
+    "status": "PASS",
+    "detail": "asset_code=QA-CL-R2T001"
+  },
+  {
+    "category": "P0-CRUD-Procurement",
+    "name": "获取采购列表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Procurement",
+    "name": "采购新字段(request_no/vendor/device_name/approval_status)存在",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Inbound",
+    "name": "创建移入记录(验收合格)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Inbound",
+    "name": "验收合格→自动生成asset_code",
+    "status": "FAIL",
+    "detail": "asset_code=None"
+  },
+  {
+    "category": "P0-CRUD-Inbound",
+    "name": "创建移入记录(验收不合格)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Inbound",
+    "name": "验收不合格→asset_code为空/null",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Inbound",
+    "name": "获取移入列表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Inbound",
+    "name": "更新移入记录",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Outbound",
+    "name": "创建移出记录(报废类别)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Outbound",
+    "name": "创建移出记录(调拨类别)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Outbound",
+    "name": "获取移出列表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Change",
+    "name": "创建变更(位置迁移+新字段)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Change",
+    "name": "创建变更(配置变更)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Change",
+    "name": "获取变更列表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Change",
+    "name": "变更新字段(work_order_no/change_content/old_config/new_config)存在",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Fault",
+    "name": "创建P1故障",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Fault",
+    "name": "创建P2-严重故障",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Fault",
+    "name": "创建P3故障",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Fault",
+    "name": "获取故障列表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Warranty",
+    "name": "创建维保(新字段warranty_no/type/vendor完整)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Warranty",
+    "name": "创建维保(部件维保类型)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Warranty",
+    "name": "获取维保列表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Retirement",
+    "name": "创建退役记录(含新枚举disposal_method)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-CRUD-Retirement",
+    "name": "获取退役列表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "RECEIVE_TYPES枚举完整(采购入库/调拨入库/客户托管/返厂维修归还)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "OUTBOUND_CATEGORIES枚举完整(调拨/送修/取回/报废)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "PROCUREMENT_APPROVAL_STATUSES枚举完整(审批中/已通过/已驳回)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "WARRANTY_TYPES枚举完整(整机维保/部件维保/延保服务/现场支持)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "DISPOSAL_METHODS枚举完整",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "OWNERSHIP_TYPES枚举完整",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "INBOUND_INSPECTION_RESULTS枚举完整",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "FAULT_LEVELS含P2-严重(不含旧P2)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "CHANGE_TYPES仅位置迁移/配置变更",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "RETIRE_CATEGORIES枚举完整",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "COMPLETION_STATUSES枚举完整",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "无效枚举值被拒绝(422)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P0-Enum",
+    "name": "无效移出类别被拒绝(422)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Validation",
+    "name": "验证检查项数为10(从13减少)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Validation",
+    "name": "严重等级为严重/中等(非error/warning)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Validation",
+    "name": "10项检查名称完整(含实际后缀)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Validation",
+    "name": "位置为空检查severity=严重",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Validation",
+    "name": "total_errors/total_warnings字段存在",
+    "status": "PASS",
+    "detail": "total_errors=126, total_warnings=35"
+  },
+  {
+    "category": "P1-Validation",
+    "name": "空编号资产被schema拒绝(422)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Inbound",
+    "name": "创建移入(验收合格)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Inbound",
+    "name": "验收合格→自动生成asset_code",
+    "status": "FAIL",
+    "detail": "asset_code=None"
+  },
+  {
+    "category": "P1-Linkage-Inbound",
+    "name": "创建移入(验收不合格)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Inbound",
+    "name": "验收不合格→asset_code为空/null",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Outbound",
+    "name": "创建报废联动测试资产",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Outbound",
+    "name": "创建移出(报废类别)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Outbound",
+    "name": "报废→自动创建Retirement记录",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Outbound",
+    "name": "报废→自动提交retirement_approval审批",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Outbound",
+    "name": "创建移出(调拨类别)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Outbound",
+    "name": "调拨→不创建Retirement记录",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Fault",
+    "name": "P1故障→资产自动降级到维修",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Fault",
+    "name": "P1故障→自动提交fault_degrade_approval",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Fault",
+    "name": "P2-严重故障→资产自动降级到维修",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-Linkage-Fault",
+    "name": "P3故障→资产不降级(保持运行)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-StageGate",
+    "name": "上架→运行(有位置信息)门禁通过",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-StageGate",
+    "name": "规划→运行(非法跳转)门禁阻止",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P1-StageGate",
+    "name": "创建无位置资产",
+    "status": "FAIL",
+    "detail": "error=HTTP Error 422: Unprocessable Content"
+  },
+  {
+    "category": "P2-RBAC",
+    "name": "admin拥有inbound:view权限",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P2-RBAC",
+    "name": "admin拥有inbound:create权限",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P2-RBAC",
+    "name": "admin拥有inbound:edit权限",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P2-RBAC",
+    "name": "admin拥有inbound:delete权限",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P2-RBAC",
+    "name": "admin拥有outbound:view权限",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P2-RBAC",
+    "name": "admin拥有outbound:create权限",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P2-RBAC",
+    "name": "admin拥有outbound:edit权限",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P2-RBAC",
+    "name": "admin拥有outbound:delete权限",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "P2-RBAC",
+    "name": "创建受限测试用户",
+    "status": "FAIL",
+    "detail": "status=400, 可能用户默认获得部分权限"
+  },
+  {
+    "category": "Additional",
+    "name": "DC-CL-XXX格式编号被接受",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "Additional",
+    "name": "非DC-CL-XXX格式编号被拒绝(422)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "Additional",
+    "name": "重复编号被拒绝(400/409/422)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "Additional",
+    "name": "删除资产成功",
+    "status": "FAIL",
+    "detail": "status=422, error=HTTP Error 422: Unprocessable Content"
+  },
+  {
+    "category": "Additional",
+    "name": "移出不存在的资产编号被拒绝",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "category": "Additional",
+    "name": "系统版本号(间接验证)",
+    "status": "PASS",
+    "detail": "通过API功能完整性间接验证v3.0.0"
+  }
+]

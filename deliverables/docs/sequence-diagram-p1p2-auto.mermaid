@@ -1,0 +1,31 @@
+sequenceDiagram
+    actor Engineer as 运维工程师
+    participant API as FastAPI路由(main.py)
+    participant Engine as 审批引擎(approval.py)
+    participant Gate as 阶段门禁(validation.py)
+    participant DB as SQLAlchemy+SQLite
+    participant Approver as 审批人(运维经理)
+
+    Engineer->>API: POST /api/faults {asset_code, fault_level: "P1", ...}
+    API->>DB: 创建Fault记录
+    API->>Engine: auto_submit_fault_approval(db, asset_code, fault_id, fault_level)
+    Engine->>Gate: check_stage_gate(db, asset_code, "维修")
+    Gate-->>Engine: {allowed: true}
+
+    Engine->>Engine: 生成审批单号 APR-YYYYMMDD-SEQ
+    Engine->>DB: 创建ApprovalRequest(approval_type=fault_degrade_approval, status=pending, applicant_id=系统)
+    Engine->>DB: 创建ApprovalStep(level=1, approver_role=ops_manager, status=pending)
+    Engine->>Engine: 自动指派审批人
+    Engine->>DB: 创建ApprovalNotification(type=pending_approval, 通知审批人)
+    Engine-->>API: 自动审批单已创建
+
+    API->>DB: P1/P2立即将Asset.lifecycle_stage改为"维修"(应急响应)
+    Note over API: 审批通过后确认阶段变更合规,<br/>若审批人驳回则需人工回退阶段
+
+    API-->>Engineer: 返回Fault+附带审批单信息
+
+    Approver->>API: GET /api/approval-requests/my-pending
+    API-->>Approver: 发现故障降级审批单(P1紧急标识)
+    Approver->>API: POST /api/approval-requests/{id}/action {action: "approve"}
+    API->>Engine: process_approval_action → 确认阶段变更 → 写审计日志
+    API-->>Approver: 审批通过,阶段变更合规确认
