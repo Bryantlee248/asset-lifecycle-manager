@@ -13,3 +13,9 @@
 - 生命周期时间线: 点击资产行查看完整事件时间线
 - 维保告警: 过期标红、30天内到期标黄
 - P1/P2故障: 自动将主表阶段切换为维修
+
+开发测试:
+python -m pip install -r requirements-dev.txt
+python -m pytest tests/test_production_mvp.py tests/test_deployment_templates.py -q
+
+服务器部署准备请阅读 deploy/README.md。公网 IP 的 HTTP 仅用于短期验证，正式对外使用前必须配置 HTTPS。
