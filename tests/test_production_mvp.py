@@ -1,9 +1,13 @@
 from pathlib import Path
+import asyncio
 import os
 import subprocess
 import sys
 
+import httpx
+from fastapi import FastAPI
 import pytest
+from sqlalchemy import create_engine
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -109,3 +113,53 @@ def test_release_files_do_not_publish_a_default_admin_password():
     ]
 
     assert all(forbidden not in path.read_text(encoding="utf-8") for path in files)
+
+
+def test_database_uses_the_configured_url(isolated_runtime):
+    from database import DATABASE_URL
+
+    assert DATABASE_URL.endswith("test.db")
+
+
+def test_sqlite_engine_enables_required_pragmas(isolated_runtime):
+    from database import engine
+
+    with engine.connect() as connection:
+        assert connection.exec_driver_sql("PRAGMA foreign_keys").scalar_one() == 1
+        assert connection.exec_driver_sql("PRAGMA busy_timeout").scalar_one() >= 5000
+        assert connection.exec_driver_sql("PRAGMA journal_mode").scalar_one().lower() == "wal"
+
+
+def get_response(app: FastAPI, path: str) -> httpx.Response:
+    async def request() -> httpx.Response:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            return await client.get(path)
+
+    return asyncio.run(request())
+
+
+def test_health_router_returns_ok_when_database_is_available(isolated_runtime):
+    import health
+
+    health.engine = create_engine("sqlite:///:memory:")
+    app = FastAPI()
+    app.include_router(health.health_router)
+
+    response = get_response(app, "/api/health")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+
+
+def test_health_router_returns_503_when_database_query_fails(isolated_runtime):
+    import health
+
+    health.engine = create_engine("sqlite:///missing-parent-directory/health.db")
+    app = FastAPI()
+    app.include_router(health.health_router)
+
+    response = get_response(app, "/api/health")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Database unavailable"}

@@ -43,6 +43,7 @@ from import_export_reports import (
 )
 from reports_stats import stats_router
 from config_api import config_router
+from health import health_router
 from schemas import (
     AssetCreate, AssetUpdate, AssetResponse,
     ProcurementCreate, ProcurementUpdate, ProcurementResponse,
@@ -1460,6 +1461,7 @@ async def api_change_frequency_report(db: Session = Depends(get_db), current_use
 app.include_router(stats_router)
 # 系统配置模块 P0：字典/分类配置 API（前缀 /api/config）
 app.include_router(config_router)
+app.include_router(health_router)
 
 
 # ============ 审批工作流辅助函数 ============

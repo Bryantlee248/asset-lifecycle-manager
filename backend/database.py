@@ -3,11 +3,16 @@ import os
 from sqlalchemy import create_engine, Column, Integer, String, Date, Float, Text, DateTime, Boolean, ForeignKey, Table, func, event, JSON, Index, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship, Session
 from datetime import datetime
+from settings import load_settings
 
+settings = load_settings()
 _DB_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_URL = f"sqlite:///{os.path.join(_DB_DIR, '..', 'asset_lifecycle.db')}"
+DATABASE_URL = settings.database_url or f"sqlite:///{os.path.join(_DB_DIR, '..', 'asset_lifecycle.db')}"
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False, "timeout": settings.sqlite_timeout_seconds},
+)
 
 
 # SQLite 启用外键约束
@@ -15,6 +20,8 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 def set_sqlite_pragma(dbapi_conn, connection_record):
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
 
