@@ -167,3 +167,21 @@ def test_health_router_returns_503_when_database_query_fails(isolated_runtime):
 
     assert response.status_code == 503
     assert response.json() == {"detail": "Database unavailable"}
+
+
+def test_default_pytest_collection_only_includes_release_gates():
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "--collect-only", "-q"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "tests/test_production_mvp.py" in result.stdout
+    assert "tests/test_deployment_templates.py" in result.stdout
+    assert "tests/test_approval.py" not in result.stdout
+    assert "tests/functional_test.py" not in result.stdout

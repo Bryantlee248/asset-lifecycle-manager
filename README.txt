@@ -16,6 +16,6 @@
 
 开发测试:
 python -m pip install -r requirements-dev.txt
-python -m pytest tests/test_production_mvp.py tests/test_deployment_templates.py -q
+python -m pytest -q
 
 服务器部署准备请阅读 deploy/README.md。公网 IP 的 HTTP 仅用于短期验证，正式对外使用前必须配置 HTTPS。
