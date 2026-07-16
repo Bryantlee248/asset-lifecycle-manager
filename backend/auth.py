@@ -383,14 +383,20 @@ DEFAULT_ROLES = [
 
 # BUG-012 修复：默认管理员使用强密码而非 admin123
 # 生产环境应通过环境变量设置，开发环境使用此默认值
-DEFAULT_ADMIN_PASSWORD = os.environ.get("DEFAULT_ADMIN_PASSWORD", "Admin@2026!Secure")
 DEFAULT_ADMIN = {
     "username": "admin",
-    "password": DEFAULT_ADMIN_PASSWORD,
     "real_name": "系统管理员",
     "department": "信息中心",
     "status": "active"
 }
+
+
+def get_bootstrap_admin_password(db: Session) -> str | None:
+    existing_admin = db.query(User).filter(User.username == "admin").first()
+    password = os.environ.get("DEFAULT_ADMIN_PASSWORD", "").strip()
+    if existing_admin is None and os.environ.get("ENV", "development").lower() == "production" and not password:
+        raise RuntimeError("Production first startup requires DEFAULT_ADMIN_PASSWORD")
+    return password or None
 
 
 def init_default_data(db: Session):
@@ -420,10 +426,11 @@ def init_default_data(db: Session):
     # 创建默认管理员
     admin_role = db.query(Role).filter(Role.code == "admin").first()
     existing_admin = db.query(User).filter(User.username == DEFAULT_ADMIN["username"]).first()
-    if not existing_admin and admin_role:
+    bootstrap_password = get_bootstrap_admin_password(db)
+    if not existing_admin and admin_role and bootstrap_password:
         admin = User(
             username=DEFAULT_ADMIN["username"],
-            password_hash=hash_password(DEFAULT_ADMIN["password"]),
+            password_hash=hash_password(bootstrap_password),
             real_name=DEFAULT_ADMIN["real_name"],
             department=DEFAULT_ADMIN["department"],
             status=DEFAULT_ADMIN["status"]

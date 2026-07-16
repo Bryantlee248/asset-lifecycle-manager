@@ -75,3 +75,37 @@ def test_auth_requires_environment_jwt_even_when_secret_file_exists(tmp_path):
 
     assert result.returncode != 0
     assert "JWT_SECRET_KEY" in result.stderr
+
+
+def test_first_production_bootstrap_requires_an_admin_password(
+    isolated_runtime, monkeypatch
+):
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from database import Base
+    from auth import init_default_data
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    session_factory = sessionmaker(bind=engine)
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.delenv("DEFAULT_ADMIN_PASSWORD", raising=False)
+    db = session_factory()
+    try:
+        with pytest.raises(RuntimeError, match="DEFAULT_ADMIN_PASSWORD"):
+            init_default_data(db)
+    finally:
+        db.close()
+
+
+def test_release_files_do_not_publish_a_default_admin_password():
+    forbidden = "Admin@2026!Secure"
+    files = [
+        PROJECT_ROOT / ".env.example",
+        PROJECT_ROOT / "start.py",
+        PROJECT_ROOT / "frontend" / "index.html",
+        PROJECT_ROOT / "backend" / "auth.py",
+    ]
+
+    assert all(forbidden not in path.read_text(encoding="utf-8") for path in files)

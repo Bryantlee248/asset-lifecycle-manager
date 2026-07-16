@@ -27,8 +27,6 @@ if args.production:
 from main import app
 import uvicorn
 
-from auth import DEFAULT_ADMIN_PASSWORD, JWT_SECRET_KEY
-
 # 判断密钥来源
 _jwt_source = "环境变量"
 _jwt_secret_file = os.path.join(backend_dir, ".jwt_secret")
@@ -51,8 +49,6 @@ print(f"  运行模式: {_env_label}")
 print(f"  启动地址: http://{args.host}:{args.port}")
 print(f"  API文档:  http://{args.host}:{args.port}/docs")
 print(f"  JWT密钥来源: {_jwt_source}")
-print()
-print(f"  默认管理员账号: admin / {DEFAULT_ADMIN_PASSWORD}")
 print()
 print("  按 Ctrl+C 停止服务")
 print("=" * 60)
