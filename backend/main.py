@@ -63,6 +63,7 @@ from schemas import (
     ApprovalStatsResponse, ApprovalTypeConfigItem, ApprovalDropdownConfig
 )
 from validation import run_all_checks, check_stage_gate
+from settings import load_settings
 from constants import (
     LIFECYCLE_STAGES, ACTIVE_STAGES,
     APPROVAL_TYPES, APPROVAL_TYPE_NAMES, APPROVAL_STATUSES
@@ -119,7 +120,7 @@ _default_origins = [
     "http://127.0.0.1:3000", "http://localhost:3000",
     "http://127.0.0.1:5173", "http://localhost:5173",
 ]
-_allowed_origins = os.environ.get("CORS_ORIGINS", ",".join(_default_origins)).split(",")
+_allowed_origins = list(load_settings().cors_origins)
 if "*" in _allowed_origins and os.environ.get("ENV") != "production":
     _allowed_origins = ["*"]
 app.add_middleware(

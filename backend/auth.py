@@ -12,13 +12,15 @@ from sqlalchemy.orm import Session
 import jwt
 from passlib.context import CryptContext
 
+from settings import load_settings
 from database import get_db, User, Role
 
 # ============ JWT 配置 ============
 # 密钥优先级: 环境变量 > 配置文件(.jwt_secret) > 开发随机生成(.jwt_dev_key)
 # 生产环境必须通过环境变量或 .jwt_secret 配置文件提供固定密钥
 # 开发环境使用 .jwt_dev_key 自动生成随机密钥
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+settings = load_settings()
+JWT_SECRET_KEY = settings.jwt_secret_key
 _backend_dir = os.path.dirname(os.path.abspath(__file__))
 if not JWT_SECRET_KEY:
     # 1. 生产密钥配置文件（部署时手动写入固定密钥）
