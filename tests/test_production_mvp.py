@@ -183,5 +183,5 @@ def test_default_pytest_collection_only_includes_release_gates():
     assert result.returncode == 0, result.stdout + result.stderr
     assert "tests/test_production_mvp.py" in result.stdout
     assert "tests/test_deployment_templates.py" in result.stdout
-    assert "tests/test_approval.py" not in result.stdout
+    assert "tests/test_approval.py" in result.stdout
     assert "tests/functional_test.py" not in result.stdout
