@@ -1,0 +1,866 @@
+[
+  {
+    "module": "认证",
+    "name": "登录-错误密码应401",
+    "status": "PASS",
+    "detail": "status=401, detail=用户名或密码错误"
+  },
+  {
+    "module": "认证",
+    "name": "登录-不存在用户应401",
+    "status": "PASS",
+    "detail": "status=401, detail=用户名或密码错误"
+  },
+  {
+    "module": "认证",
+    "name": "Token无效应401",
+    "status": "PASS",
+    "detail": "status=401"
+  },
+  {
+    "module": "认证",
+    "name": "登录-禁用账号应403",
+    "status": "PASS",
+    "detail": "status=403, detail=账户已被禁用，请联系管理员"
+  },
+  {
+    "module": "认证",
+    "name": "修改密码-原密码错误应400",
+    "status": "PASS",
+    "detail": "status=400, detail=原密码错误"
+  },
+  {
+    "module": "认证",
+    "name": "修改密码-新密码太短(<6字符)应422",
+    "status": "PASS",
+    "detail": "status=422"
+  },
+  {
+    "module": "认证/RBAC",
+    "name": "viewer不能创建资产(应403)",
+    "status": "PASS",
+    "detail": "detail=权限不足，需要权限: assets:create"
+  },
+  {
+    "module": "认证/RBAC",
+    "name": "ops_engineer不能删除资产(应403)",
+    "status": "PASS",
+    "detail": "detail=权限不足，需要权限: assets:delete"
+  },
+  {
+    "module": "认证/RBAC",
+    "name": "ops_engineer没有approval:approve(应403)",
+    "status": "PASS",
+    "detail": "detail=权限不足，需要权限: approval:approve"
+  },
+  {
+    "module": "认证/RBAC",
+    "name": "viewer不能查看用户列表(应403)",
+    "status": "PASS",
+    "detail": "detail=权限不足，需要权限: users:view"
+  },
+  {
+    "module": "认证/RBAC",
+    "name": "ops_engineer不能删除采购记录(应403)",
+    "status": "PASS",
+    "detail": "detail=权限不足，需要权限: procurement:delete"
+  },
+  {
+    "module": "认证/RBAC",
+    "name": "viewer可以查看资产列表",
+    "status": "PASS",
+    "detail": "total=103"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "创建资产-正常",
+    "status": "PASS",
+    "detail": "id=104, code=FUNC-ASSET-001"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "创建资产-重复编号应400",
+    "status": "PASS",
+    "detail": "detail=资产编号 FUNC-ASSET-001 已存在"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "创建资产-缺少必填字段应422",
+    "status": "PASS",
+    "detail": "status=422"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "创建资产-无效分类被接受(缺陷:无枚举校验)",
+    "status": "PASS",
+    "detail": "DEFECT: asset_category='INVALID_CATEGORY' 被创建成功，但不在CATEGORIES枚举中"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "读取资产列表",
+    "status": "PASS",
+    "detail": "total=104"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "读取单个资产",
+    "status": "PASS",
+    "detail": "code=FUNC-ASSET-001"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "读取不存在资产应404",
+    "status": "PASS",
+    "detail": "status=404"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "搜索资产",
+    "status": "PASS",
+    "detail": "total=10"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "分页测试",
+    "status": "PASS",
+    "detail": "items=5"
+  },
+  {
+    "module": "资产CRUD",
+    "name": "更新资产-正常",
+    "status": "PASS",
+    "detail": "brand=HP"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "规划→在途:应允许",
+    "status": "PASS",
+    "detail": "allowed=True, msg=可以从 '规划' 跳转到 '在途'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "规划→运行:应禁止",
+    "status": "PASS",
+    "detail": "allowed=False, msg=不允许从 '规划' 跳转到 '运行'。合法跳转: ['在途', '上架']"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "规划→上架:应允许",
+    "status": "PASS",
+    "detail": "allowed=True, msg=可以从 '规划' 跳转到 '上架'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "PUT跳转 规划→在途:成功",
+    "status": "PASS",
+    "detail": "stage=在途"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "在途→上架(验收合格):应允许",
+    "status": "PASS",
+    "detail": "msg=可以从 '在途' 跳转到 '上架'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "在途→运行:应允许",
+    "status": "PASS",
+    "detail": "msg=可以从 '在途' 跳转到 '运行'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "资产到达运行阶段",
+    "status": "PASS",
+    "detail": "stage=运行"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "运行→维修:应允许",
+    "status": "PASS",
+    "detail": "msg=可以从 '运行' 跳转到 '维修'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "运行→在途:应允许",
+    "status": "PASS",
+    "detail": "msg=可以从 '运行' 跳转到 '在途'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "运行→待报废:应允许",
+    "status": "PASS",
+    "detail": "msg=可以从 '运行' 跳转到 '待报废'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "运行→规划:应禁止",
+    "status": "PASS",
+    "detail": "msg=不允许从 '运行' 跳转到 '规划'。合法跳转: ['维修', '待报废', '在途']"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "运行→已报废:应禁止",
+    "status": "PASS",
+    "detail": "msg=不允许从 '运行' 跳转到 '已报废'。合法跳转: ['维修', '待报废', '在途']"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "维修→运行(有未恢复故障):应禁止",
+    "status": "PASS",
+    "detail": "msg=恢复运行需要先填写故障恢复日期"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "维修→运行(仍有未恢复故障):应禁止",
+    "status": "PASS",
+    "detail": "msg=恢复运行需要先填写故障恢复日期 — 正确行为:有未恢复故障就阻止跳转"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "维修→运行(所有故障已恢复):应允许",
+    "status": "PASS",
+    "detail": "msg=可以从 '维修' 跳转到 '运行'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "维修→待报废:应允许",
+    "status": "PASS",
+    "detail": "msg=可以从 '维修' 跳转到 '待报废'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "待报废→已报废(无退役记录):应禁止",
+    "status": "PASS",
+    "detail": "msg=报废需要先在退役报废表填写报废申请单号"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "待报废→已报废(数据未清除):应禁止",
+    "status": "PASS",
+    "detail": "msg=报废需要先确认数据已清除"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "待报废→已报废(数据已清除+申请单号):应允许",
+    "status": "PASS",
+    "detail": "msg=可以从 '待报废' 跳转到 '已报废'"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "PUT跳转 规划→运行:应400拒绝",
+    "status": "PASS",
+    "detail": "detail=不允许从 '规划' 跳转到 '运行'。合法跳转: ['在途', '上架']"
+  },
+  {
+    "module": "阶段门禁",
+    "name": "PUT跳转 规划→在途:应成功",
+    "status": "PASS",
+    "detail": "stage=在途"
+  },
+  {
+    "module": "采购入库",
+    "name": "创建采购记录",
+    "status": "PASS",
+    "detail": "id=2"
+  },
+  {
+    "module": "采购入库",
+    "name": "自动计算总价(3*100000=300000)",
+    "status": "PASS",
+    "detail": "total_price=300000.0"
+  },
+  {
+    "module": "采购入库",
+    "name": "创建-无效资产编号应400",
+    "status": "PASS",
+    "detail": "detail=资产编号 NONEXIST999 不存在"
+  },
+  {
+    "module": "采购入库",
+    "name": "读取列表",
+    "status": "PASS",
+    "detail": "total=2"
+  },
+  {
+    "module": "采购入库",
+    "name": "按资产编号筛选",
+    "status": "PASS",
+    "detail": "total=1"
+  },
+  {
+    "module": "采购入库",
+    "name": "更新+自动重算总价(5*100000=500000)",
+    "status": "PASS",
+    "detail": "total_price=500000.0"
+  },
+  {
+    "module": "采购入库",
+    "name": "删除采购记录",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "变更迁移",
+    "name": "创建变更记录",
+    "status": "PASS",
+    "detail": "id=2"
+  },
+  {
+    "module": "变更迁移",
+    "name": "创建-无效资产编号应400",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "变更迁移",
+    "name": "更新变更记录",
+    "status": "PASS",
+    "detail": "completion_status=已完成"
+  },
+  {
+    "module": "变更迁移",
+    "name": "删除变更记录",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "故障维修",
+    "name": "P1故障创建(检查500缺陷)",
+    "status": "FAIL",
+    "detail": "status=500, 这是个关键缺陷: P1故障创建返回500而不是200"
+  },
+  {
+    "module": "故障维修/缺陷",
+    "name": "P1故障创建返回500(阶段变更顺序错误)",
+    "status": "FAIL",
+    "detail": "BUG: 代码先变更阶段到维修再提交审批，导致submit_approval阶段门禁校验失败(维修→维修不合法)"
+  },
+  {
+    "module": "故障维修",
+    "name": "P3故障创建正常",
+    "status": "PASS",
+    "detail": "id=4"
+  },
+  {
+    "module": "故障维修",
+    "name": "P3故障不自动变更阶段",
+    "status": "PASS",
+    "detail": "stage=运行"
+  },
+  {
+    "module": "故障维修",
+    "name": "更新故障记录",
+    "status": "PASS",
+    "detail": "recovery_date=2024-08-05"
+  },
+  {
+    "module": "故障维修",
+    "name": "删除P3故障记录",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "故障维修",
+    "name": "创建-无效资产编号应400",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "故障维修",
+    "name": "上架阶段P1故障创建(同样500缺陷)",
+    "status": "FAIL",
+    "detail": "status=500"
+  },
+  {
+    "module": "维保续保",
+    "name": "创建维保记录",
+    "status": "PASS",
+    "detail": "id=1"
+  },
+  {
+    "module": "维保续保",
+    "name": "创建-无效资产编号应400",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "维保续保",
+    "name": "更新维保记录",
+    "status": "PASS",
+    "detail": "cost=20000.0"
+  },
+  {
+    "module": "维保续保",
+    "name": "删除维保记录",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "退役报废",
+    "name": "创建退役记录",
+    "status": "PASS",
+    "detail": "id=2"
+  },
+  {
+    "module": "退役报废",
+    "name": "创建-无效资产编号应400",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "退役报废",
+    "name": "更新退役记录",
+    "status": "PASS",
+    "detail": "disposal_method=捐赠"
+  },
+  {
+    "module": "退役报废",
+    "name": "删除退役记录",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "审批",
+    "name": "创建审批单(draft)",
+    "status": "PASS",
+    "detail": "id=3, no=APR-20260629-003, status=draft"
+  },
+  {
+    "module": "审批",
+    "name": "创建审批单-不存在的资产应400",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "审批",
+    "name": "创建审批单-阶段不匹配应400",
+    "status": "PASS",
+    "detail": "detail=资产当前阶段'规划'不匹配审批类型要求的'运行'"
+  },
+  {
+    "module": "审批",
+    "name": "提交审批 draft→pending",
+    "status": "PASS",
+    "detail": "status=pending"
+  },
+  {
+    "module": "审批",
+    "name": "非申请人不能提交审批应403",
+    "status": "PASS",
+    "detail": "detail=仅申请人可提交审批单"
+  },
+  {
+    "module": "审批",
+    "name": "审批通过(approve)-单级",
+    "status": "PASS",
+    "detail": "status=approved"
+  },
+  {
+    "module": "审批",
+    "name": "审批通过后阶段变更 规划→在途",
+    "status": "PASS",
+    "detail": "stage=在途"
+  },
+  {
+    "module": "审批",
+    "name": "驳回测试-审批单提交",
+    "status": "PASS",
+    "detail": "id=5"
+  },
+  {
+    "module": "审批",
+    "name": "驳回时必须填写comment",
+    "status": "PASS",
+    "detail": "status=400, detail=驳回时必须填写审批意见"
+  },
+  {
+    "module": "审批",
+    "name": "驳回审批(reject)成功",
+    "status": "PASS",
+    "detail": "status=rejected"
+  },
+  {
+    "module": "审批",
+    "name": "驳回后重新提交→pending",
+    "status": "PASS",
+    "detail": "status=pending"
+  },
+  {
+    "module": "审批",
+    "name": "撤回审批 pending→cancelled",
+    "status": "PASS",
+    "detail": "status=cancelled"
+  },
+  {
+    "module": "审批",
+    "name": "非申请人或已取消状态不能再撤回",
+    "status": "PASS",
+    "detail": "status=400, detail=当前状态为cancelled，仅pending状态可撤回"
+  },
+  {
+    "module": "审批",
+    "name": "手动指定审批人提交",
+    "status": "PASS",
+    "detail": "status=pending"
+  },
+  {
+    "module": "审批",
+    "name": "指定审批人优先于自动指派",
+    "status": "PASS",
+    "detail": "expected=2, got=2"
+  },
+  {
+    "module": "审批",
+    "name": "非指定审批人(ops_manager)不能审批应400",
+    "status": "PASS",
+    "detail": "detail=您不是当前级别的指定审批人"
+  },
+  {
+    "module": "审批",
+    "name": "admin可代审批(非指定审批人)",
+    "status": "PASS",
+    "detail": "status=approved"
+  },
+  {
+    "module": "审批",
+    "name": "退役审批-提交pending",
+    "status": "PASS",
+    "detail": "status=pending"
+  },
+  {
+    "module": "审批",
+    "name": "退役审批-第1级ops_manager通过",
+    "status": "PASS",
+    "detail": "status=pending, level=2"
+  },
+  {
+    "module": "审批",
+    "name": "退役审批-第2级admin通过",
+    "status": "PASS",
+    "detail": "status=approved"
+  },
+  {
+    "module": "审批",
+    "name": "退役审批通过后 运行→待报废",
+    "status": "PASS",
+    "detail": "stage=待报废"
+  },
+  {
+    "module": "审批",
+    "name": "审批统计",
+    "status": "PASS",
+    "detail": "total_pending=1"
+  },
+  {
+    "module": "审批",
+    "name": "我的待审列表",
+    "status": "PASS",
+    "detail": "total=1"
+  },
+  {
+    "module": "审批",
+    "name": "我的申请列表",
+    "status": "PASS",
+    "detail": "total=4"
+  },
+  {
+    "module": "审批/通知",
+    "name": "通知列表",
+    "status": "PASS",
+    "detail": "total=4"
+  },
+  {
+    "module": "审批/通知",
+    "name": "未读通知计数",
+    "status": "PASS",
+    "detail": "count=4"
+  },
+  {
+    "module": "审批/通知",
+    "name": "标记单条通知已读",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "审批/通知",
+    "name": "批量标记全部已读",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "审批",
+    "name": "审批类型配置",
+    "status": "PASS",
+    "detail": "types_count=6"
+  },
+  {
+    "module": "审批",
+    "name": "审批下拉选项",
+    "status": "PASS",
+    "detail": "types_count=6"
+  },
+  {
+    "module": "校验仪表盘",
+    "name": "13项检查返回",
+    "status": "PASS",
+    "detail": "checks_count=13"
+  },
+  {
+    "module": "校验仪表盘",
+    "name": "13项检查名称完整",
+    "status": "PASS",
+    "detail": "got=['编号空值', 'SN空值', '位置空值', '责任人空值', '阶段空值', '编号重复', '位置重复', '维保过期', '维保即将到期', '日期矛盾', '报废无记录', '孤儿记录', 'P1/P2未恢复']"
+  },
+  {
+    "module": "校验仪表盘",
+    "name": "total_assets字段",
+    "status": "PASS",
+    "detail": "total_assets=114"
+  },
+  {
+    "module": "distinct-values",
+    "name": "API返回成功",
+    "status": "PASS",
+    "detail": "keys_count=20"
+  },
+  {
+    "module": "distinct-values",
+    "name": "所有字段存在",
+    "status": "PASS",
+    "detail": "missing=[]"
+  },
+  {
+    "module": "distinct-values",
+    "name": "persons合并系统用户",
+    "status": "PASS",
+    "detail": "persons_count=30"
+  },
+  {
+    "module": "by-role",
+    "name": "admin角色用户列表",
+    "status": "PASS",
+    "detail": "count=1"
+  },
+  {
+    "module": "by-role",
+    "name": "ops_manager角色用户列表",
+    "status": "PASS",
+    "detail": "count=2"
+  },
+  {
+    "module": "by-role",
+    "name": "ops_engineer角色用户列表",
+    "status": "PASS",
+    "detail": "count=4"
+  },
+  {
+    "module": "by-role",
+    "name": "不存在的角色码应404",
+    "status": "PASS",
+    "detail": "detail=角色 nonexistent_role 不存在"
+  },
+  {
+    "module": "导入导出",
+    "name": "导出资产Excel",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导出子表Excel-procurement",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导出子表Excel-change",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导出子表Excel-fault",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导出子表Excel-warranty",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导出子表Excel-retirement",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导入模板下载-assets",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导入模板下载-procurement",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导入模板下载-change",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导入模板下载-fault",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导入模板下载-warranty",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出",
+    "name": "导入模板下载-retirement",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "导入导出/RBAC",
+    "name": "viewer可以导出(有import_export:export权限)",
+    "status": "PASS",
+    "detail": "status=200"
+  },
+  {
+    "module": "导入导出/RBAC",
+    "name": "viewer不能下载导入模板(缺少import_export:import)",
+    "status": "PASS",
+    "detail": "status=403"
+  },
+  {
+    "module": "报表",
+    "name": "综合报表",
+    "status": "PASS",
+    "detail": "keys=['total_assets', 'by_category', 'by_stage', 'by_warranty', 'warranty_expired_count']"
+  },
+  {
+    "module": "报表",
+    "name": "维保到期报表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "报表",
+    "name": "故障分析报表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "报表",
+    "name": "变更频率报表",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "报表",
+    "name": "统计概览stats",
+    "status": "PASS",
+    "detail": "total_assets=114"
+  },
+  {
+    "module": "资产删除",
+    "name": "删除资产成功",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "module": "资产删除",
+    "name": "级联删除采购记录",
+    "status": "PASS",
+    "detail": "before=1, after=0"
+  },
+  {
+    "module": "资产删除",
+    "name": "级联删除变更记录",
+    "status": "PASS",
+    "detail": "before=1, after=0"
+  },
+  {
+    "module": "边界",
+    "name": "修改密码-正常流程(engineer)",
+    "status": "PASS",
+    "detail": "detail={'message': '密码修改成功'}"
+  },
+  {
+    "module": "边界",
+    "name": "新密码登录成功",
+    "status": "PASS",
+    "detail": "token=True"
+  },
+  {
+    "module": "边界",
+    "name": "/api/auth/me",
+    "status": "PASS",
+    "detail": "username=admin"
+  },
+  {
+    "module": "边界",
+    "name": "/api/auth/permissions(无需登录)",
+    "status": "PASS",
+    "detail": "groups=12"
+  },
+  {
+    "module": "边界",
+    "name": "/api/config/dropdowns",
+    "status": "PASS",
+    "detail": "categories=['服务器', '网络设备', '存储设备', '安全设备', 'UPS', '配电设备', '空调', 'KVM', 'PDU', '其他']"
+  },
+  {
+    "module": "边界",
+    "name": "资产时间线",
+    "status": "PASS",
+    "detail": "timeline_count=0"
+  },
+  {
+    "module": "边界",
+    "name": "采购-显式总价不被自动计算覆盖",
+    "status": "PASS",
+    "detail": "total_price=99999.0 (expected 99999)"
+  },
+  {
+    "module": "用户管理",
+    "name": "重置密码-指定新密码",
+    "status": "PASS",
+    "detail": "detail={'message': '密码已重置为: NewReset2024!', 'generated': False}"
+  },
+  {
+    "module": "用户管理",
+    "name": "重置密码-自动生成(new_password=None)",
+    "status": "PASS",
+    "detail": "detail={'message': '密码已重置为: BPPT7MfUcfSlhWPb', 'generated': True}"
+  },
+  {
+    "module": "用户管理",
+    "name": "不能删除自己应400",
+    "status": "PASS",
+    "detail": "detail=不能删除自己"
+  },
+  {
+    "module": "角色管理",
+    "name": "系统内置角色不可删除应400",
+    "status": "PASS",
+    "detail": "detail=系统内置角色不可删除"
+  },
+  {
+    "module": "RBAC",
+    "name": "viewer可以查看校验仪表盘",
+    "status": "PASS",
+    "detail": ""
+  }
+]

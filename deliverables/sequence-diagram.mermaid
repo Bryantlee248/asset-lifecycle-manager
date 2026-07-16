@@ -1,0 +1,73 @@
+sequenceDiagram
+    autonumber
+    participant U as 用户/前端(SPA零改动)
+    participant M as main.py
+    participant A as approval.py
+    participant E as WorkflowEngine
+    participant DB as database
+    participant N as 通知/阶段驱动
+
+    rect rgb(235,245,255)
+    note over U,N: ① 用户发起审批 → 生成步骤 → 审批推进
+    U->>M: POST /api/approval-requests (approval_type, asset_code, reason)
+    M->>DB: 查询 Asset
+    M->>E: validate_stage(approval_type, asset)
+    E->>DB: 读 WorkflowTemplate(approval_type)
+    E-->>M: 阶段校验通过 / 抛 400（阶段不匹配或 * 仅限活跃阶段）
+    M->>E: get_target_stage(approval_type, asset.lifecycle_stage)
+    E-->>M: target_stage（来自模板）
+    M->>DB: 写 ApprovalRequest(draft)
+    M-->>U: _build_approval_response（契约不变）
+
+    U->>M: POST /api/approval-requests/{id}/submit
+    M->>A: submit_approval(request_id, approver_ids?)
+    A->>A: 阶段门禁检查(skip_gate_types 保留)
+    A->>E: create_steps(request, approver_ids?)
+    E->>DB: 读 WorkflowTemplate.chain
+    loop 每个 chain 节点
+        E->>E: auto_assign_approver(role) 或 approver_ids 覆盖
+        E->>DB: 写 ApprovalStep(level, approver_id, approver_role, pending)
+    end
+    E-->>A: List[ApprovalStep]
+    A->>N: notify_approver（通知当前级别）
+    A-->>U: request(pending)
+
+    U->>M: POST /api/approval-requests/{id}/action (approve)
+    M->>A: process_approval_action(...)
+    A->>DB: 标记当前 ApprovalStep approved
+    A->>E: has_more_levels(approval_type, current_level)
+    alt 还有下一级(multi 且未到末级)
+        E-->>A: True
+        A->>A: current_level += 1
+        A->>N: notify_approver(下一级)
+    else 末级 → 最终通过
+        E-->>A: False
+        A->>N: drive_stage_change（驱动资产阶段变更）
+        A->>N: notify_applicant（审批通过）
+    end
+    A-->>U: request
+    end
+
+    rect rgb(240,255,240)
+    note over U,N: ② 自动触发路径（故障/移出报废）→ 步骤同样走引擎
+    participant F as 故障/退役模块
+    F->>A: auto_submit_fault_approval / outbound_retirement_auto_submit
+    A->>A: 建 ApprovalRequest(draft, 跳过门禁)
+    A->>E: create_steps(request)  ← 读 WorkflowTemplate
+    E->>DB: 写 ApprovalStep（按模板 role 指派）
+    E-->>A: List[ApprovalStep]
+    A->>N: notify_approver
+    A-->>F: {request_no, status}
+    end
+
+    rect rgb(255,250,235)
+    note over U,N: ③ 模板管理 API（仅 admin，approval_template:manage）
+    U->>M: GET /api/approval-templates (require_permission approval_template:manage)
+    M->>E: list_templates()
+    E->>DB: 读全部 WorkflowTemplate
+    M-->>U: 模板列表（8类+状态）
+    U->>M: PUT /api/approval-templates/{id}
+    M->>E: update_template(id, data)
+    E->>DB: 覆盖写当前生效模板（无版本，即时对新发起审批生效）
+    M-->>U: 更新后模板
+    end

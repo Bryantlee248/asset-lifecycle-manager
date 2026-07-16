@@ -1,0 +1,56 @@
+sequenceDiagram
+    actor Applicant as 申请人(运维工程师)
+    actor Approver as 审批人(运维经理/admin)
+    participant API as FastAPI路由(main.py)
+    participant Engine as 审批引擎(approval.py)
+    participant Gate as 阶段门禁(validation.py)
+    participant DB as SQLAlchemy+SQLite
+    participant Audit as AuditLog
+
+    Applicant->>API: POST /api/approval-requests (创建draft)
+    API->>DB: 创建ApprovalRequest(status=draft)
+    API->>Applicant: 返回审批单详情
+
+    Applicant->>API: POST /api/approval-requests/{id}/submit
+    API->>Engine: submit_approval(db, request_id, applicant)
+    Engine->>Engine: 状态机校验: draft→pending合法?
+    Engine->>Gate: check_stage_gate(db, asset_code, target_stage)
+    Gate-->>Engine: {allowed: true, message: "..."}
+    Engine->>Engine: 解析审批链(APPROVAL_CHAIN_CONFIG[type])
+    Engine->>DB: 创建ApprovalStep记录(每级1条, status=pending)
+    Engine->>Engine: 自动指派审批人(查询对应角色第一个活跃用户)
+    Engine->>DB: 更新ApprovalRequest(status=pending, applied_at=now)
+    Engine->>DB: 创建ApprovalNotification(type=pending_approval, 通知审批人)
+    Engine-->>API: 返回提交结果
+    API-->>Applicant: 200 OK
+
+    Approver->>API: GET /api/approval-requests/my-pending
+    API-->>Approver: 待审列表(含徽标数量)
+
+    Approver->>API: GET /api/approval-requests/{id}
+    API-->>Approver: 审批详情(含steps)
+
+    Approver->>API: POST /api/approval-requests/{id}/action {action: "approve", comment: "同意"}
+    API->>Engine: process_approval_action(db, request_id, action, comment, approver)
+    Engine->>Engine: 校验操作人是否为当前级别审批人
+    Engine->>DB: 更新ApprovalStep(level=current, status=approved, acted_at=now)
+
+    alt 多级审批且有下一级(报废退役)
+        Engine->>Engine: current_level += 1
+        Engine->>DB: 更新ApprovalRequest(current_level=2)
+        Engine->>DB: 创建ApprovalNotification(通知二级审批人admin)
+        Engine-->>API: 返回"流转至下一级"
+        API-->>Approver: 200 流转至下一级审批人
+    else 单级审批 或 多级已全部通过
+        Engine->>Engine: 全部步骤已approved?
+        Engine->>DB: 更新ApprovalRequest(status=approved, approved_at=now)
+        Engine->>Gate: check_stage_gate(db, asset_code, target_stage) 二次校验
+        Gate-->>Engine: {allowed: true}
+        Engine->>DB: 更新Asset.lifecycle_stage = target_stage
+        Engine->>Audit: 写入AuditLog(action="stage_change_via_approval", detail="审批单APR-xxx通过,阶段从xx变更为yy")
+        Engine->>DB: 创建ApprovalNotification(type=approved, 通知申请人)
+        Engine-->>API: 返回审批通过+阶段变更结果
+        API-->>Approver: 200 审批通过,阶段已变更
+    end
+
+    Note over Gate: 审批通过后的二次校验失败(罕见):<br/>Engine标记审批单approved但记录异常,<br/>不自动变更阶段,需人工介入
