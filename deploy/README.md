@@ -32,6 +32,40 @@ sqlite3 /opt/asset-lifecycle-manager/asset_lifecycle.db "PRAGMA integrity_check;
 
 Keep backups outside the application directory and test restoration before each release.
 
+## P0 operational tasks
+
+Install the timers after deploying the application source. The backup directory is
+only readable by the application user.
+
+```bash
+sudo install -d -o asset-lifecycle -g asset-lifecycle -m 0700 /var/backups/asset-lifecycle
+sudo cp deploy/systemd/asset-lifecycle-backup.service deploy/systemd/asset-lifecycle-backup.timer /etc/systemd/system/
+sudo cp deploy/systemd/asset-lifecycle-healthcheck.service deploy/systemd/asset-lifecycle-healthcheck.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now asset-lifecycle-backup.timer asset-lifecycle-healthcheck.timer
+systemctl list-timers 'asset-lifecycle-*'
+```
+
+Run each service manually after installation and inspect its local journal output.
+
+```bash
+sudo systemctl start asset-lifecycle-backup.service
+sudo systemctl start asset-lifecycle-healthcheck.service
+sudo systemctl --failed
+sudo journalctl -u asset-lifecycle-backup.service -n 50 --no-pager
+sudo journalctl -u asset-lifecycle-healthcheck.service -n 50 --no-pager
+```
+
+Perform a recovery drill only to a separate temporary path. Do not point the restore
+script at the production database path.
+
+```bash
+latest=$(sudo find /var/backups/asset-lifecycle -name 'asset_lifecycle-*.db' -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)
+sudo -u asset-lifecycle /opt/asset-lifecycle-manager/.venv/bin/python -m scripts.restore_database --backup "$latest" --target /var/tmp/asset-lifecycle-restore-drill.db
+sqlite3 /var/tmp/asset-lifecycle-restore-drill.db 'PRAGMA integrity_check;'
+rm /var/tmp/asset-lifecycle-restore-drill.db
+```
+
 ## Service setup
 
 Install the systemd unit and start it:

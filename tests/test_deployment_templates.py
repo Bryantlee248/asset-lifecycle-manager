@@ -32,3 +32,31 @@ def test_deployment_readme_requires_https_before_formal_public_use():
     assert "HTTPS" in content
     assert "HTTP" in content
     assert "127.0.0.1:8000" in content
+
+
+def test_backup_timer_uses_the_application_user_and_daily_schedule():
+    service = (
+        PROJECT_ROOT / "deploy/systemd/asset-lifecycle-backup.service"
+    ).read_text(encoding="utf-8")
+    timer = (
+        PROJECT_ROOT / "deploy/systemd/asset-lifecycle-backup.timer"
+    ).read_text(encoding="utf-8")
+
+    assert "User=asset-lifecycle" in service
+    assert "scripts.backup_database" in service
+    assert "--retention 14" in service
+    assert "OnCalendar=*-*-* 02:30:00" in timer
+
+
+def test_healthcheck_timer_runs_a_local_check_every_minute():
+    service = (
+        PROJECT_ROOT / "deploy/systemd/asset-lifecycle-healthcheck.service"
+    ).read_text(encoding="utf-8")
+    timer = (
+        PROJECT_ROOT / "deploy/systemd/asset-lifecycle-healthcheck.timer"
+    ).read_text(encoding="utf-8")
+
+    assert "scripts.healthcheck" in service
+    assert "127.0.0.1:8000/api/health" in service
+    assert "--minimum-free-mib 1024" in service
+    assert "OnUnitActiveSec=1min" in timer
