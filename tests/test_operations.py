@@ -4,6 +4,7 @@ import sqlite3
 import pytest
 
 from scripts.backup_database import create_backup
+from scripts.healthcheck import check_database, check_disk_space
 from scripts.restore_database import restore_backup
 
 
@@ -44,3 +45,24 @@ def test_restore_backup_refuses_to_overwrite_an_existing_target(tmp_path):
 
     with pytest.raises(FileExistsError):
         restore_backup(backup, target)
+
+
+def test_check_database_reports_integrity_failure(tmp_path):
+    database = tmp_path / "broken.db"
+    database.write_bytes(b"not a sqlite database")
+
+    assert check_database(database).startswith("database integrity check failed:")
+
+
+def test_check_disk_space_reports_below_threshold(tmp_path, monkeypatch):
+    class Usage:
+        free = 1024
+
+    monkeypatch.setattr(
+        "scripts.healthcheck.shutil.disk_usage", lambda _: Usage()
+    )
+
+    assert (
+        check_disk_space(tmp_path, minimum_free_bytes=2048)
+        == "disk free space below threshold"
+    )
