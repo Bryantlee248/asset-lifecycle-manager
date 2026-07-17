@@ -1,0 +1,10 @@
+[Unit]
+Description=IT Asset Lifecycle local health check
+After=asset-lifecycle.service
+
+[Service]
+Type=oneshot
+User=asset-lifecycle
+Group=asset-lifecycle
+WorkingDirectory=/opt/asset-lifecycle-manager
+ExecStart=/opt/asset-lifecycle-manager/.venv/bin/python -m scripts.healthcheck --health-url http://127.0.0.1:8000/api/health --database /opt/asset-lifecycle-manager/asset_lifecycle.db --minimum-free-mib 1024
