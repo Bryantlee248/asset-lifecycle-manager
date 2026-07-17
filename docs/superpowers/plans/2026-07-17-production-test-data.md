@@ -4,9 +4,9 @@
 
 **Goal:** Safely add 100 identifiable test assets and six test users to the production system through its authenticated HTTP API.
 
-**Architecture:** Use the already authenticated browser origin to issue `fetch` requests to the deployed application, so no database path, server credential, or administrator token leaves the browser context. Read state before every write; create only the missing test records and make no delete or update request except disabling the newly created `test_disabled` account.
+**Architecture:** Use an authenticated browser origin or a user-supplied temporary administrator credential to issue HTTP API requests. The credential obtains an in-memory token only; no database path, credential, or token is written to disk. Read state before every write; create only the missing test records and make no delete or update request except disabling the newly created `test_disabled` account.
 
-**Tech Stack:** Existing browser administrator session, browser `fetch`, FastAPI endpoints `/api/config/dropdowns`, `/api/assets`, `/api/roles`, and `/api/users`.
+**Tech Stack:** Existing browser administrator session or in-memory API token, FastAPI endpoints `/api/auth/login`, `/api/config/dropdowns`, `/api/assets`, `/api/roles`, and `/api/users`.
 
 ---
 

@@ -8,7 +8,7 @@ Add a safe, identifiable test dataset to the deployed IT asset system for demons
 
 - Ensure exactly 100 test assets exist with codes `DC-CL-TST-001` through `DC-CL-TST-100`.
 - Create six test users: `test_admin`, `test_ops_manager`, `test_ops_engineer_1`, `test_ops_engineer_2`, `test_viewer`, and `test_disabled`.
-- Use the existing browser administrator session and application APIs only.
+- Use the existing browser administrator session or an explicitly supplied temporary administrator credential, and application APIs only.
 
 ## Data Rules
 
@@ -29,5 +29,6 @@ Add a safe, identifiable test dataset to the deployed IT asset system for demons
 ## Exclusions
 
 - No direct database access.
+- A supplied temporary credential is used only to obtain an in-memory API token; neither credential nor token is written to disk, Git, or the handoff.
 - No deletion, reset, or modification of non-test records.
 - No deployment or source-code change.
