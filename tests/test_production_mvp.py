@@ -119,6 +119,39 @@ def test_release_files_do_not_publish_a_default_admin_password():
     )
 
 
+def test_frontend_uses_the_modern_operations_console_system():
+    html = (PROJECT_ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+
+    required_tokens = (
+        "--surface:",
+        "--shell:",
+        "--accent:",
+        "--healthy:",
+        "--warning:",
+        "--critical:",
+    )
+    required_selectors = (
+        ".app-header { background: var(--surface);",
+        ".sidebar { background: var(--shell);",
+        ".page-card { background: var(--surface);",
+        ".filter-bar {",
+        ".login-header .login-logo { color: var(--accent);",
+        ".el-tabs__item.is-active",
+        ".el-dialog__footer",
+        "@media (max-width: 900px)",
+    )
+
+    assert all(token in html for token in required_tokens)
+    assert all(selector in html for selector in required_selectors)
+    assert "linear-gradient" not in html
+    assert "@element-plus/icons-vue@2.3.1/dist/index.iife.min.js" in html
+    assert "Object.entries(ElementPlusIconsVue)" in html
+    assert html.count("<el-icon>") >= 18
+    assert html.index("vue@3.5.13/dist/vue.global.prod.js") < html.index(
+        "@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"
+    )
+
+
 def test_database_uses_the_configured_url(isolated_runtime):
     from database import DATABASE_URL
 

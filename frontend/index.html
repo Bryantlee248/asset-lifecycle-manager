@@ -9,41 +9,41 @@
     <!-- 统计看板图表库（ECharts，CDN 引入，无需打包） -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
-        :root { --primary: #0052D9; --primary-light: #E8F0FE; --danger: #E34D59; --warning: #ED7B2F; --success: #2BA471; --bg: #F3F5F8; }
+        :root { --surface: #ffffff; --shell: #202b36; --canvas: #f5f7fa; --line: #dde3ea; --text: #1f2933; --muted: #667085; --accent: #2563eb; --accent-soft: #eaf1ff; --healthy: #0f766e; --healthy-soft: #e6f5f2; --warning: #b45309; --warning-soft: #fff5e6; --critical: #c2413b; --critical-soft: #fff0ee; --primary: var(--accent); --primary-light: var(--accent-soft); --danger: var(--critical); --success: var(--healthy); --bg: var(--canvas); }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg); }
         #app { min-height: 100vh; }
 
-        .app-header { background: linear-gradient(135deg, #0052D9 0%, #003DA6 100%); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0,82,217,0.3); }
-        .app-header h1 { font-size: 18px; font-weight: 600; letter-spacing: 1px; }
-        .app-header .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; opacity: 0.9; }
+        .app-header { background: var(--surface); color: var(--text); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; border-bottom: 1px solid var(--line); box-shadow: none; }
+        .app-header h1 { font-size: 16px; font-weight: 650; letter-spacing: 0; }
+        .app-header .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--muted); opacity: 1; }
 
         .app-body { margin-top: 56px; display: flex; min-height: calc(100vh - 56px); }
 
-        .sidebar { width: 200px; background: #fff; border-right: 1px solid #E7E8EB; position: fixed; top: 56px; bottom: 0; overflow-y: auto; }
-        .sidebar .menu-group { padding: 12px 0; }
-        .sidebar .menu-group-title { padding: 8px 20px; font-size: 11px; color: #8C8E96; text-transform: uppercase; letter-spacing: 1px; }
-        .sidebar .menu-item { display: flex; align-items: center; padding: 10px 20px; cursor: pointer; color: #4B5160; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
-        .sidebar .menu-item:hover { background: var(--primary-light); color: var(--primary); }
-        .sidebar .menu-item.active { background: var(--primary-light); color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
-        .sidebar .menu-item .icon { margin-right: 10px; font-size: 16px; width: 20px; text-align: center; }
+        .sidebar { background: var(--shell); width: 216px; border-right: 0; position: fixed; top: 56px; bottom: 0; overflow-y: auto; }
+        .sidebar .menu-group { padding: 10px 0; }
+        .sidebar .menu-group-title { padding: 8px 16px; font-size: 11px; color: #9dabb9; text-transform: uppercase; letter-spacing: .08em; }
+        .sidebar .menu-item { display: flex; align-items: center; margin: 2px 8px; padding: 10px 12px; cursor: pointer; color: #d4dde7; font-size: 14px; transition: all 0.2s; border-left: 0; border-radius: 4px; }
+        .sidebar .menu-item:hover { background: #2c3b4b; color: #fff; }
+        .sidebar .menu-item.active { background: #334a62; color: #fff; font-weight: 600; }
+        .sidebar .menu-item .icon { display: inline-flex; justify-content: center; margin-right: 10px; font-size: 16px; width: 20px; text-align: center; }
 
-        .main-content { margin-left: 200px; flex: 1; padding: 20px 24px; }
+        .main-content { margin-left: 216px; flex: 1; padding: 24px; }
 
-        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-        .stat-card { background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #E7E8EB; }
-        .stat-card .label { font-size: 13px; color: #8C8E96; margin-bottom: 8px; }
-        .stat-card .value { font-size: 28px; font-weight: 700; color: #1D2129; }
+        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+        .stat-card { background: var(--surface); border-radius: 6px; min-height: 116px; padding: 16px; border: 1px solid var(--line); }
+        .stat-card .label { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: var(--text); }
         .stat-card .value.danger { color: var(--danger); }
         .stat-card .value.warning { color: var(--warning); }
         .stat-card .value.success { color: var(--success); }
-        .stat-card .sub { font-size: 12px; color: #8C8E96; margin-top: 4px; }
+        .stat-card .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-        .page-card { background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #E7E8EB; margin-bottom: 20px; }
-        .page-card .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .page-card .card-title { font-size: 16px; font-weight: 600; color: #1D2129; }
+        .page-card { background: var(--surface); border-radius: 6px; padding: 20px; border: 1px solid var(--line); margin-bottom: 16px; box-shadow: none; }
+        .page-card .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .page-card .card-title { font-size: 15px; font-weight: 650; color: var(--text); }
 
-        .filter-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+        .filter-bar { display: flex; min-height: 40px; gap: 8px; margin-bottom: 14px; padding: 10px 12px; flex-wrap: wrap; align-items: center; background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; }
 
         .stage-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
         .stage-规划 { background: #E8F0FE; color: #0052D9; }
@@ -78,10 +78,10 @@
         .el-button--primary { --el-button-bg-color: #0052D9; --el-button-border-color: #0052D9; }
         .el-button--primary:hover { --el-button-hover-bg-color: #0061F0; --el-button-hover-border-color: #0061F0; }
 
-        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0052D9 0%, #003DA6 100%); }
-        .login-card { width: 400px; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .login-container { min-height: 100vh; display: grid; place-items: center; background: var(--canvas); }
+        .login-card { width: min(400px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 32px; box-shadow: 0 16px 36px rgba(31, 41, 51, .10); }
         .login-header { text-align: center; margin-bottom: 32px; }
-        .login-header .login-logo { font-size: 48px; margin-bottom: 12px; }
+        .login-header .login-logo { color: var(--accent); font-size: 36px; margin-bottom: 12px; }
         .login-header h2 { color: #1D2129; font-size: 22px; margin-bottom: 4px; }
         .login-header p { color: #8C8E96; font-size: 14px; }
         .login-form .el-form-item { margin-bottom: 20px; }
@@ -109,7 +109,23 @@
         .notification-badge { position: absolute; top: -4px; right: -4px; background: #E34D59; color: #fff; font-size: 10px; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
         .notification-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #E34D59; margin-right: 6px; }
 
-        @media (max-width: 1200px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
+        .el-table { --el-table-border-color: var(--line); --el-table-header-bg-color: #f8fafc; --el-table-row-hover-bg-color: #f4f8ff; color: var(--text); }
+        .el-table th.el-table__cell { color: #475467; font-size: 12px; font-weight: 650; }
+        .el-table .cell { font-size: 13px; line-height: 20px; }
+        .el-button--primary { --el-button-bg-color: var(--accent); --el-button-border-color: var(--accent); --el-button-hover-bg-color: #1d4ed8; --el-button-hover-border-color: #1d4ed8; }
+        .el-tabs__header { margin: 0 0 16px; }
+        .el-tabs__item { height: 38px; color: var(--muted); font-weight: 500; }
+        .el-tabs__item.is-active { color: var(--accent); font-weight: 650; }
+        .el-tabs__active-bar { height: 2px; background: var(--accent); }
+        .el-tag, .stage-tag, .approval-status-tag { border-radius: 4px; font-weight: 600; }
+        .el-dialog, .el-drawer { border-radius: 6px; }
+        .el-dialog__header, .el-drawer__header { margin: 0; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+        .el-dialog__body, .el-drawer__body { padding: 20px; }
+        .el-dialog__footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--line); }
+        .el-form-item__label { color: #475467; font-weight: 600; }
+        @media (max-width: 1200px) { .stat-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 900px) { .app-header { padding: 0 16px; } .app-header .header-right > span:not(:last-child) { display: none; } .sidebar { width: 64px; } .sidebar .menu-group-title, .sidebar .menu-item > :not(.icon) { display: none; } .sidebar .menu-item { justify-content: center; margin: 4px 8px; padding: 10px; } .sidebar .menu-item .icon { margin: 0; } .main-content { margin-left: 64px; padding: 16px; } .filter-bar { align-items: stretch; } .filter-bar .el-input, .filter-bar .el-select { width: 100% !important; } }
+        @media (max-width: 640px) { .stat-cards { grid-template-columns: 1fr; } .main-content { padding: 12px; } .page-card { padding: 14px; } .el-dialog { width: calc(100vw - 24px) !important; } }
     </style>
 </head>
 <body>
@@ -163,73 +179,73 @@
             <div class="menu-group">
                 <div class="menu-group-title">概览</div>
                 <div class="menu-item" :class="{active: currentTab==='dashboard'}" @click="currentTab='dashboard'">
-                    <span class="icon">📊</span>数据总览
+                    <span class="icon"><el-icon><Odometer /></el-icon></span>数据总览
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='validation'}" @click="currentTab='validation'">
-                    <span class="icon">🔍</span>校验仪表盘
+                    <span class="icon"><el-icon><CircleCheck /></el-icon></span>校验仪表盘
                 </div>
             </div>
             <div class="menu-group">
                 <div class="menu-group-title">数据交换</div>
                 <div class="menu-item" :class="{active: currentTab==='importExport'}" @click="currentTab='importExport'">
-                    <span class="icon">📤</span>导入导出
+                    <span class="icon"><el-icon><Files /></el-icon></span>导入导出
                 </div>
             </div>
             <div class="menu-group">
                 <div class="menu-group-title">报表统计</div>
                 <div class="menu-item" :class="{active: currentTab==='reports'}" @click="currentTab='reports'">
-                    <span class="icon">📈</span>报表统计
+                    <span class="icon"><el-icon><DataAnalysis /></el-icon></span>报表统计
                 </div>
                 <div class="menu-item" v-if="hasPerm('reports:view')" :class="{active: currentTab==='stats'}" @click="currentTab='stats'">
-                    <span class="icon">📊</span>统计看板
+                    <span class="icon"><el-icon><TrendCharts /></el-icon></span>统计看板
                 </div>
             </div>
             <div class="menu-group">
                 <div class="menu-group-title">资产管理</div>
                 <div class="menu-item" :class="{active: currentTab==='assets'}" @click="currentTab='assets'">
-                    <span class="icon">🖥️</span>资产台账
+                    <span class="icon"><el-icon><Box /></el-icon></span>资产台账
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='procurement'}" @click="currentTab='procurement'">
-                    <span class="icon">📦</span>采购入库
+                    <span class="icon"><el-icon><ShoppingCart /></el-icon></span>采购入库
                 </div>
                 <div class="menu-item" v-if="hasPerm('inbound:view')" :class="{active: currentTab==='inbound'}" @click="currentTab='inbound'">
-                    <span class="icon">📥</span>资产移入
+                    <span class="icon"><el-icon><Download /></el-icon></span>资产移入
                 </div>
                 <div class="menu-item" v-if="hasPerm('outbound:view')" :class="{active: currentTab==='outbound'}" @click="currentTab='outbound'">
-                    <span class="icon">📤</span>资产移出
+                    <span class="icon"><el-icon><Upload /></el-icon></span>资产移出
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='changes'}" @click="currentTab='changes'">
-                    <span class="icon">🔄</span>变更迁移
+                    <span class="icon"><el-icon><Switch /></el-icon></span>变更迁移
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='faults'}" @click="currentTab='faults'">
-                    <span class="icon">⚠️</span>故障维修
+                    <span class="icon"><el-icon><WarningFilled /></el-icon></span>故障维修
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='warranties'}" @click="currentTab='warranties'">
-                    <span class="icon">🛡️</span>维保续保
+                    <span class="icon"><el-icon><Service /></el-icon></span>维保续保
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='retirements'}" @click="currentTab='retirements'">
-                    <span class="icon">🗑️</span>退役报废
+                    <span class="icon"><el-icon><DeleteFilled /></el-icon></span>退役报废
                 </div>
             </div>
             <div class="menu-group" v-if="hasPerm('approval:view')">
                 <div class="menu-group-title">审批工作流</div>
                 <div class="menu-item" v-if="hasPerm('approval:view')" :class="{active: currentTab==='approval'}" @click="currentTab='approval'">
-                    <span class="icon">📋</span>审批中心
+                    <span class="icon"><el-icon><DocumentChecked /></el-icon></span>审批中心
                 </div>
                 <div class="menu-item" v-if="hasPerm('approval:view')" :class="{active: currentTab==='approvalNotify'}" @click="currentTab='approvalNotify'; loadApprovalNotifications()">
-                    <span class="icon" style="position:relative;">🔔<span v-if="approvalUnread>0" class="notification-badge">{{ approvalUnread }}</span></span>审批通知
+                    <span class="icon" style="position:relative;"><el-icon><Bell /></el-icon><span v-if="approvalUnread>0" class="notification-badge">{{ approvalUnread }}</span></span>审批通知
                 </div>
             </div>
             <div class="menu-group" v-if="hasAnyPerm('users:view','roles:view','config:manage')">
                 <div class="menu-group-title">系统管理</div>
                 <div class="menu-item" v-if="hasPerm('users:view')" :class="{active: currentTab==='users'}" @click="currentTab='users'">
-                    <span class="icon">👥</span>用户管理
+                    <span class="icon"><el-icon><User /></el-icon></span>用户管理
                 </div>
                 <div class="menu-item" v-if="hasPerm('roles:view')" :class="{active: currentTab==='roles'}" @click="currentTab='roles'">
-                    <span class="icon">🔑</span>角色管理
+                    <span class="icon"><el-icon><Avatar /></el-icon></span>角色管理
                 </div>
                 <div class="menu-item" v-if="hasPerm('config:manage')" :class="{active: currentTab==='config'}" @click="currentTab='config'; loadConfig()">
-                    <span class="icon">⚙️</span>系统配置
+                    <span class="icon"><el-icon><Setting /></el-icon></span>系统配置
                 </div>
             </div>
         </nav>
@@ -1975,6 +1991,7 @@
 </div>
 
 <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"></script>
 <script src="https://unpkg.com/element-plus@2.9.1/dist/index.full.min.js"></script>
 <script>
 const { createApp, ref, reactive, onMounted, computed, watch, nextTick } = Vue;
@@ -3596,6 +3613,9 @@ const app = createApp({
     }
 });
 
+Object.entries(ElementPlusIconsVue).forEach(([name, component]) => {
+    app.component(name, component);
+});
 app.use(ElementPlus);
 app.mount('#app');
 </script>
