@@ -53,7 +53,7 @@ jobs:
 
       - name: Package release
         run: |
-          tar -czf asset-lifecycle-manager.tgz \
+          tar -czf "$RUNNER_TEMP/asset-lifecycle-manager.tgz" \
             --exclude=.git \
             --exclude=.github \
             --exclude=.worktrees \
@@ -93,7 +93,7 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          scp -i ~/.ssh/deploy_key -P "${DEPLOY_PORT:-22}" asset-lifecycle-manager.tgz "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/asset-lifecycle-manager.tgz"
+          scp -i ~/.ssh/deploy_key -P "${DEPLOY_PORT:-22}" "$RUNNER_TEMP/asset-lifecycle-manager.tgz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/asset-lifecycle-manager.tgz"
 
       - name: Deploy to server
         env:
