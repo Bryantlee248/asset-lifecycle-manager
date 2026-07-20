@@ -5,8 +5,7 @@ from sqlalchemy import func
 import json
 
 from database import (ApprovalRequest, ApprovalStep, ApprovalNotification,
-                       Asset, Retirement, User, Role, record_stage_change)
-from audit import record_audit
+                       Asset, Retirement, User, Role, AuditLog, record_stage_change)
 from validation import check_stage_gate
 from constants import (APPROVAL_TYPE_NAMES,
                        APPROVAL_TYPE_FAULT_DEGRADE,
@@ -115,14 +114,6 @@ def submit_approval(db: Session, request_id: int, approver_ids: list = None) -> 
 
     steps = create_approval_steps(db, request, approver_ids)
     notify_approver(db, request)
-    record_audit(
-        db,
-        request.applicant_id,
-        "submit",
-        "approval_request",
-        str(request.id),
-        {"asset_code": request.asset_code, "status": request.status},
-    )
 
     db.commit()
     db.refresh(request)
@@ -160,14 +151,6 @@ def process_approval_action(db: Session, request_id: int, action: str,
         request.status = APPROVAL_STATUS_REJECTED
         request.rejection_count += 1
         notify_applicant(db, request, "rejected", f"审批已被驳回。驳回原因：{comment}")
-        record_audit(
-            db,
-            approver_id,
-            "reject",
-            "approval_request",
-            str(request.id),
-            {"asset_code": request.asset_code, "status": request.status, "comment": comment},
-        )
         db.commit()
         db.refresh(request)
         return request
@@ -181,14 +164,6 @@ def process_approval_action(db: Session, request_id: int, action: str,
         if engine.has_more_levels(request.approval_type, request.current_level):
             request.current_level += 1
             notify_approver(db, request)
-            record_audit(
-                db,
-                approver_id,
-                "approve",
-                "approval_request",
-                str(request.id),
-                {"asset_code": request.asset_code, "status": request.status, "level": current_step.level},
-            )
             db.commit()
             db.refresh(request)
             return request
@@ -196,17 +171,9 @@ def process_approval_action(db: Session, request_id: int, action: str,
             request.status = APPROVAL_STATUS_APPROVED
             request.approved_at = datetime.now(timezone.utc)
 
-            drive_stage_change(db, request, approver_id)
+            drive_stage_change(db, request)
 
             notify_applicant(db, request, "approved", f"审批已通过。资产{request.asset_code}的阶段已从'{request.current_stage}'变更为'{request.target_stage}'。")
-            record_audit(
-                db,
-                approver_id,
-                "approve",
-                "approval_request",
-                str(request.id),
-                {"asset_code": request.asset_code, "status": request.status, "level": current_step.level},
-            )
 
             db.commit()
             db.refresh(request)
@@ -215,7 +182,7 @@ def process_approval_action(db: Session, request_id: int, action: str,
     raise ValueError(f"不支持的操作类型: {action}")
 
 
-def drive_stage_change(db: Session, request: ApprovalRequest, actor_id: int) -> None:
+def drive_stage_change(db: Session, request: ApprovalRequest) -> None:
     """审批通过后驱动阶段变更（核心集成点）"""
     if request.target_stage == request.current_stage:
         return
@@ -228,19 +195,14 @@ def drive_stage_change(db: Session, request: ApprovalRequest, actor_id: int) -> 
             asset.lifecycle_stage = request.target_stage
             asset.last_updated = datetime.now(timezone.utc)
             type_name = APPROVAL_TYPE_NAMES.get(request.approval_type, request.approval_type)
-            record_audit(
-                db,
-                actor_id,
-                "stage_change_via_approval",
-                "asset",
-                asset.asset_code,
-                {
-                    "approval_request": request.request_no,
-                    "from_stage": old_stage,
-                    "to_stage": request.target_stage,
-                    "approval_type": type_name,
-                },
+            audit = AuditLog(
+                user_id=request.applicant_id,
+                action="stage_change_via_approval",
+                resource_type="asset",
+                resource_id=asset.asset_code,
+                detail=f"审批单{request.request_no}通过，资产{asset.asset_code}阶段从'{old_stage}'变更为'{request.target_stage}'，审批类型：{type_name}"
             )
+            db.add(audit)
 
             # P2 阶段变更日志：故障降级审批路径跳过（已由 create_fault 写一条「运行→维修」，避免双写/空转）
             if request.approval_type != APPROVAL_TYPE_FAULT_DEGRADE:
@@ -272,14 +234,6 @@ def cancel_approval(db: Session, request_id: int, applicant_id: int) -> Approval
         notify_applicant(db, request, "cancelled", f"审批单{request.request_no}已被申请人撤回。")
         create_notification(db, request.id, current_step.approver_id, "cancelled", "审批已撤回", f"资产{request.asset_code}的阶段变更审批已被申请人撤回。")
 
-    record_audit(
-        db,
-        applicant_id,
-        "cancel",
-        "approval_request",
-        str(request.id),
-        {"asset_code": request.asset_code, "status": request.status},
-    )
     db.commit()
     db.refresh(request)
     return request
@@ -305,15 +259,6 @@ def resubmit_approval(db: Session, request_id: int, new_reason: str = None,
     for step in old_steps:
         db.delete(step)
     db.flush()
-
-    record_audit(
-        db,
-        request.applicant_id,
-        "resubmit",
-        "approval_request",
-        str(request.id),
-        {"asset_code": request.asset_code, "status": request.status},
-    )
 
     return submit_approval(db, request_id)
 

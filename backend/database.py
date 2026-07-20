@@ -6,6 +6,7 @@ from datetime import datetime
 from settings import load_settings
 
 settings = load_settings()
+
 _DB_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_URL = settings.database_url or f"sqlite:///{os.path.join(_DB_DIR, '..', 'asset_lifecycle.db')}"
 
@@ -20,8 +21,6 @@ engine = create_engine(
 def set_sqlite_pragma(dbapi_conn, connection_record):
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
 
@@ -437,6 +436,96 @@ class Category(Base):
         Index("ix_categories_code_enabled", "category_code", "enabled"),
         # O6: 仅 category_name 唯一; category_code 不 unique（容纳 PDU 碰撞）
     )
+
+
+# ============ 系统配置模块 P1：阶段流转矩阵规则 ============
+class StageTransitionRule(Base):
+    """阶段流转矩阵规则（valid_transitions 数据库化，design §3.1）。
+
+    from_stage/to_stage 为自由字符串（非 DB 外键），取值约束为
+    constants.LIFECYCLE_STAGES，由 Pydantic field_validator 校验。
+    唯一约束 (from_stage, to_stage)；is_system 行由 seed 写入，禁止物理删除。
+    """
+    __tablename__ = "stage_transition_rule"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    from_stage = Column(String(20), nullable=False, comment="源阶段")
+    to_stage = Column(String(20), nullable=False, comment="目标阶段")
+    allowed = Column(Boolean, default=True, nullable=False, comment="该流转是否启用")
+    require_approval = Column(Boolean, default=True, nullable=False, comment="O5: 仅落库, P1 门禁不消费")
+    require_fault_record = Column(Boolean, default=False, nullable=False, comment="需要至少一条故障记录且全部已恢复")
+    require_data_cleared = Column(Boolean, default=False, nullable=False, comment="需要数据已清除(退役报废表 data_cleared='已清除')")
+    require_retirement = Column(Boolean, default=False, nullable=False, comment="需要退役报废表记录且申请单号非空")
+    require_inspection = Column(Boolean, default=False, nullable=False, comment="需要验收结果为'合格'(采购/移入任一)")
+    require_location = Column(Boolean, default=False, nullable=False, comment="需要完整位置信息(机房/机柜/U位)")
+    remark = Column(Text, nullable=True, comment="备注")
+    is_system = Column(Boolean, default=False, nullable=False, comment="系统内置规则(seed 写入, 不可删)")
+    sort_order = Column(Integer, default=0, nullable=False, comment="排序")
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    __table_args__ = (
+        UniqueConstraint("from_stage", "to_stage", name="uq_stage_transition"),
+    )
+
+    def to_dict(self) -> dict:
+        """返回全部列键值（供缓存/导出序列化）。"""
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+# ============ 系统配置模块 P2：校验规则开关（10 项校验数据库化） ============
+class ValidationRuleSwitch(Base):
+    """资产生命周期校验规则开关（10 项校验数据库化，design §3.1）。
+
+    rule_key 与 validation.run_all_checks 的 10 个检查分支一一对应且稳定；
+    severity 取值固定 '严重'/'中等'，与现状一致；enabled 默认 true（=当前常开行为）；
+    is_system 行由 seed 写入，禁止物理删除（仅可停用）。
+    """
+    __tablename__ = "validation_rule_switch"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    rule_key = Column(String(40), unique=True, nullable=False, comment="稳定键(empty_code/duplicate_code/...)")
+    check_name = Column(String(50), nullable=False, comment="校验名称(只读)")
+    description = Column(Text, nullable=True, comment="检查逻辑说明(只读)")
+    severity = Column(String(10), nullable=False, comment="'严重'|'中等'(只读)")
+    enabled = Column(Boolean, default=True, nullable=False, comment="是否启用该校验")
+    remark = Column(Text, nullable=True, comment="管理员备注(可改)")
+    is_system = Column(Boolean, default=True, nullable=False, comment="系统内置(seed写入,不可删)")
+    sort_order = Column(Integer, default=0, nullable=False, comment="排序")
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+
+    def to_dict(self) -> dict:
+        """返回全部列键值（供缓存/导出序列化）。"""
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+# ============ 系统配置模块 P2：聚合维度白名单（AGGREGATE_FIELD_WHITELIST 数据库化） ============
+class AggregateWhitelist(Base):
+    """自定义字段聚合维度白名单（AGGREGATE_FIELD_WHITELIST 数据库化，design §3.2）。
+
+    field_key 为 Asset 模型合法列名（唯一）；field_label 为展示名；
+    metric_support 默认 'count,original_value'（P3 可扩展更多指标）；
+    enabled 默认 true；is_system 行由 seed 写入不可删。
+    """
+    __tablename__ = "aggregate_whitelist"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    field_key = Column(String(50), unique=True, nullable=False, comment="Asset 列名(唯一)")
+    field_label = Column(String(50), nullable=False, comment="展示名")
+    metric_support = Column(String(50), default="count,original_value", nullable=False, comment="支持指标")
+    enabled = Column(Boolean, default=True, nullable=False, comment="是否允许按该维度聚合")
+    remark = Column(Text, nullable=True, comment="管理员备注(可改)")
+    is_system = Column(Boolean, default=True, nullable=False, comment="系统内置(seed写入,不可删)")
+    sort_order = Column(Integer, default=0, nullable=False, comment="排序")
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    __table_args__ = (
+        UniqueConstraint("field_key", name="uq_aggregate_field"),
+    )
+
+    def to_dict(self) -> dict:
+        """返回全部列键值（供缓存/导出序列化）。"""
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 # ============ 阶段变更事件日志（报表统计模块 P2：S-16/S-17 数据底座） ============

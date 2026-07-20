@@ -33,8 +33,10 @@ from approval import (
 )
 from workflow_engine import WorkflowEngine
 from seed_workflow_templates import seed_workflow_templates
-from config_cache import build_enum_cache, DROPDOWN_FIELD_TO_SOURCE
+from config_cache import build_enum_cache, invalidate_and_rebuild, DROPDOWN_FIELD_TO_SOURCE
 from seed_config_dict import seed_config_dict
+from seed_stage_transitions import seed_stage_transitions
+from seed_p2_config import seed_p2_config
 from import_export_reports import (
     import_assets_excel, import_subtable_excel,
     export_assets_excel, export_subtable_excel, download_import_template,
@@ -146,7 +148,9 @@ async def lifespan(app):
         seed_workflow_templates(db)
         # 系统配置模块 P0：种子字典/分类 + 启动期构建枚举缓存（单一数据源）
         seed_config_dict(db)
-        build_enum_cache(db)
+        seed_stage_transitions(db)
+        seed_p2_config(db)
+        invalidate_and_rebuild(db)
     finally:
         db.close()
     yield
