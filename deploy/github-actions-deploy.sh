@@ -65,8 +65,9 @@ if [ ! -x "$NEW_DIR/.venv/bin/python" ]; then
   python3 -m venv "$NEW_DIR/.venv"
 fi
 
-"$NEW_DIR/.venv/bin/python" -m pip install --upgrade pip
-"$NEW_DIR/.venv/bin/python" -m pip install -i "${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}" -r "$NEW_DIR/requirements.txt"
+PIP_INDEX_URL="${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}"
+"$NEW_DIR/.venv/bin/python" -m pip install -i "$PIP_INDEX_URL" --timeout 60 --upgrade pip
+"$NEW_DIR/.venv/bin/python" -m pip install -i "$PIP_INDEX_URL" --timeout 60 -r "$NEW_DIR/requirements.txt"
 
 ln -sfn "$DATA_DIR/asset_lifecycle.db" "$NEW_DIR/asset_lifecycle.db"
 
