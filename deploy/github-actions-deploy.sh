@@ -89,6 +89,11 @@ import main
 print(f'import_ok={main.app.title}')
 PY
 
+# 幂等追加场景化测试数据；发布前已有 SQLite 备份，脚本只创建缺失的 SIM 编号。
+if [ -f "$NEW_DIR/generate_scenario_test_data.py" ]; then
+  runuser -u asset-lifecycle -- "$NEW_DIR/.venv/bin/python" "$NEW_DIR/generate_scenario_test_data.py"
+fi
+
 printf 'source_path=%s\nsource_sha=%s\ndeployed_at=%s\npublic_url=%s\n' \
   "$PWD" "$SOURCE_SHA" "$(date -Is)" "$PUBLIC_URL" > "$NEW_DIR/.release-info"
 
