@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 *.db
+*.db-shm
+*.db-wal
 *.log
 .pytest_cache/
 .venv/
@@ -8,3 +10,6 @@ __pycache__/
 .env
 .jwt_secret
 .jwt_dev_key
+dashboard-preview-*.png
+login-preview*.png
+migrate_backups/
