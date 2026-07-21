@@ -9,41 +9,41 @@
     <!-- 统计看板图表库（ECharts，CDN 引入，无需打包） -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
-        :root { --primary: #0052D9; --primary-light: #E8F0FE; --danger: #E34D59; --warning: #ED7B2F; --success: #2BA471; --bg: #F3F5F8; }
+        :root { --surface: #ffffff; --shell: #202b36; --canvas: #f5f7fa; --line: #dde3ea; --text: #1f2933; --muted: #667085; --accent: #2563eb; --accent-soft: #eaf1ff; --healthy: #0f766e; --healthy-soft: #e6f5f2; --warning: #b45309; --warning-soft: #fff5e6; --critical: #c2413b; --critical-soft: #fff0ee; --primary: var(--accent); --primary-light: var(--accent-soft); --danger: var(--critical); --success: var(--healthy); --bg: var(--canvas); }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg); }
         #app { min-height: 100vh; }
 
-        .app-header { background: linear-gradient(135deg, #0052D9 0%, #003DA6 100%); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0,82,217,0.3); }
-        .app-header h1 { font-size: 18px; font-weight: 600; letter-spacing: 1px; }
-        .app-header .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; opacity: 0.9; }
+        .app-header { background: var(--surface); color: var(--text); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; border-bottom: 1px solid var(--line); box-shadow: none; }
+        .app-header h1 { font-size: 16px; font-weight: 650; letter-spacing: 0; }
+        .app-header .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--muted); opacity: 1; }
 
         .app-body { margin-top: 56px; display: flex; min-height: calc(100vh - 56px); }
 
-        .sidebar { width: 200px; background: #fff; border-right: 1px solid #E7E8EB; position: fixed; top: 56px; bottom: 0; overflow-y: auto; }
-        .sidebar .menu-group { padding: 12px 0; }
-        .sidebar .menu-group-title { padding: 8px 20px; font-size: 11px; color: #8C8E96; text-transform: uppercase; letter-spacing: 1px; }
-        .sidebar .menu-item { display: flex; align-items: center; padding: 10px 20px; cursor: pointer; color: #4B5160; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
-        .sidebar .menu-item:hover { background: var(--primary-light); color: var(--primary); }
-        .sidebar .menu-item.active { background: var(--primary-light); color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
-        .sidebar .menu-item .icon { margin-right: 10px; font-size: 16px; width: 20px; text-align: center; }
+        .sidebar { background: var(--shell); width: 216px; border-right: 0; position: fixed; top: 56px; bottom: 0; overflow-y: auto; }
+        .sidebar .menu-group { padding: 10px 0; }
+        .sidebar .menu-group-title { padding: 8px 16px; font-size: 11px; color: #9dabb9; text-transform: uppercase; letter-spacing: .08em; }
+        .sidebar .menu-item { display: flex; align-items: center; margin: 2px 8px; padding: 10px 12px; cursor: pointer; color: #d4dde7; font-size: 14px; transition: all 0.2s; border-left: 0; border-radius: 4px; }
+        .sidebar .menu-item:hover { background: #2c3b4b; color: #fff; }
+        .sidebar .menu-item.active { background: #334a62; color: #fff; font-weight: 600; }
+        .sidebar .menu-item .icon { display: inline-flex; justify-content: center; margin-right: 10px; font-size: 16px; width: 20px; text-align: center; }
 
-        .main-content { margin-left: 200px; flex: 1; padding: 20px 24px; }
+        .main-content { margin-left: 216px; flex: 1; padding: 24px; }
 
-        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-        .stat-card { background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #E7E8EB; }
-        .stat-card .label { font-size: 13px; color: #8C8E96; margin-bottom: 8px; }
-        .stat-card .value { font-size: 28px; font-weight: 700; color: #1D2129; }
+        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+        .stat-card { background: var(--surface); border-radius: 6px; min-height: 116px; padding: 16px; border: 1px solid var(--line); }
+        .stat-card .label { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: var(--text); }
         .stat-card .value.danger { color: var(--danger); }
         .stat-card .value.warning { color: var(--warning); }
         .stat-card .value.success { color: var(--success); }
-        .stat-card .sub { font-size: 12px; color: #8C8E96; margin-top: 4px; }
+        .stat-card .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-        .page-card { background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #E7E8EB; margin-bottom: 20px; }
-        .page-card .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .page-card .card-title { font-size: 16px; font-weight: 600; color: #1D2129; }
+        .page-card { background: var(--surface); border-radius: 6px; padding: 20px; border: 1px solid var(--line); margin-bottom: 16px; box-shadow: none; }
+        .page-card .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .page-card .card-title { font-size: 15px; font-weight: 650; color: var(--text); }
 
-        .filter-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+        .filter-bar { display: flex; min-height: 40px; gap: 8px; margin-bottom: 14px; padding: 10px 12px; flex-wrap: wrap; align-items: center; background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; }
 
         .stage-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
         .stage-规划 { background: #E8F0FE; color: #0052D9; }
@@ -78,10 +78,10 @@
         .el-button--primary { --el-button-bg-color: #0052D9; --el-button-border-color: #0052D9; }
         .el-button--primary:hover { --el-button-hover-bg-color: #0061F0; --el-button-hover-border-color: #0061F0; }
 
-        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0052D9 0%, #003DA6 100%); }
-        .login-card { width: 400px; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .login-container { min-height: 100vh; display: grid; place-items: center; background: var(--canvas); }
+        .login-card { width: min(400px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 32px; box-shadow: 0 16px 36px rgba(31, 41, 51, .10); }
         .login-header { text-align: center; margin-bottom: 32px; }
-        .login-header .login-logo { font-size: 48px; margin-bottom: 12px; }
+        .login-header .login-logo { color: var(--accent); font-size: 36px; margin-bottom: 12px; }
         .login-header h2 { color: #1D2129; font-size: 22px; margin-bottom: 4px; }
         .login-header p { color: #8C8E96; font-size: 14px; }
         .login-form .el-form-item { margin-bottom: 20px; }
@@ -1147,7 +1147,7 @@
             <!-- ========== 系统配置（P0：字典/分类配置中心） ========== -->
             <template v-if="currentTab==='config'">
                 <div class="page-card">
-                    <el-tabs v-model="configSubTab">
+                    <el-tabs v-model="configSubTab" @tab-change="onConfigSubTabChange">
                         <el-tab-pane label="字典管理" name="dict">
                             <div style="display:flex; gap:16px; align-items:flex-start;">
                                 <!-- 业务域页签 -->
@@ -1209,6 +1209,136 @@
                                 </el-table-column>
                             </el-table>
                         </el-tab-pane>
+                        <el-tab-pane label="阶段流转配置" name="stage">
+                            <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <el-button type="primary" size="small" @click="openStageForm(null)">新增规则</el-button>
+                                <el-button size="small" @click="exportStageRules">导出规则</el-button>
+                                <el-upload :auto-upload="false" :show-file-list="false" :on-change="onImportStageFile" accept=".json,application/json" style="display:inline-block;">
+                                    <el-button size="small">导入规则</el-button>
+                                </el-upload>
+                            </div>
+                            <!-- 矩阵视图：全部 11 对，禁用态灰显（主理人拍板 O1） -->
+                            <div style="margin-bottom:16px; padding:12px; background:#f7f8fa; border-radius:6px;">
+                                <div style="font-weight:600; margin-bottom:8px;">当前阶段流转矩阵（全部 11 对，灰色=已停用）</div>
+                                <div v-for="row in stageMatrix" :key="row.from_stage" style="display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;">
+                                    <span style="display:inline-block; width:64px; text-align:right; color:#666;">{{ row.from_stage }} →</span>
+                                    <el-tag v-for="t in row.targets" :key="t.to_stage" :type="t.allowed ? 'success' : 'info'" size="small" effect="light">
+                                        {{ t.to_stage }}<span v-if="!t.allowed">（停用）</span>
+                                    </el-tag>
+                                </div>
+                            </div>
+                            <!-- 规则表格 -->
+                            <el-table :data="stageRules" stripe border style="width:100%;" v-loading="configLoading">
+                                <el-table-column prop="from_stage" label="源阶段" width="110"></el-table-column>
+                                <el-table-column prop="to_stage" label="目标阶段" width="110"></el-table-column>
+                                <el-table-column label="允许" width="80">
+                                    <template #default="scope">
+                                        <el-tag :type="scope.row.allowed?'success':'info'" size="small">{{ scope.row.allowed?'启用':'停用' }}</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="前置条件开关" min-width="340">
+                                    <template #default="scope">
+                                        <el-tag v-if="scope.row.require_inspection" type="warning" size="small" effect="plain">验收</el-tag>
+                                        <el-tag v-if="scope.row.require_location" type="warning" size="small" effect="plain">位置</el-tag>
+                                        <el-tag v-if="scope.row.require_fault_record" type="warning" size="small" effect="plain">故障</el-tag>
+                                        <el-tag v-if="scope.row.require_retirement" type="warning" size="small" effect="plain">退役单</el-tag>
+                                        <el-tag v-if="scope.row.require_data_cleared" type="warning" size="small" effect="plain">数据清除</el-tag>
+                                        <el-tag v-if="!scope.row.require_inspection && !scope.row.require_location && !scope.row.require_fault_record && !scope.row.require_retirement && !scope.row.require_data_cleared" type="info" size="small">无</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
+                                <el-table-column label="操作" width="200" fixed="right">
+                                    <template #default="scope">
+                                        <el-button link type="primary" size="small" @click="openStageForm(scope.row)">编辑</el-button>
+                                        <el-button link type="warning" size="small" @click="toggleStageRule(scope.row)">{{ scope.row.allowed?'停用':'启用' }}</el-button>
+                                        <el-button link type="danger" size="small" @click="deleteStageRule(scope.row)">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-tab-pane>
+                        <el-tab-pane label="校验规则开关" name="valswitch">
+                            <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <el-button type="danger" size="small" @click="resetValidationRules">恢复默认</el-button>
+                                <el-button size="small" @click="exportValidationRules">导出</el-button>
+                                <el-upload :auto-upload="false" :show-file-list="false" :on-change="onImportValidationFile" accept=".json,application/json" style="display:inline-block;">
+                                    <el-button size="small">导入</el-button>
+                                </el-upload>
+                                <span style="color:#888; font-size:12px;">关闭某项后，对应校验将从仪表盘消失（存量数据不动）</span>
+                            </div>
+                            <el-table :data="validationRules" stripe border style="width:100%;" v-loading="configLoading">
+                                <el-table-column prop="rule_key" label="规则键" min-width="180"></el-table-column>
+                                <el-table-column prop="check_name" label="校验名称" min-width="130"></el-table-column>
+                                <el-table-column prop="severity" label="严重度" width="90">
+                                    <template #default="scope">
+                                        <el-tag :type="scope.row.severity==='严重'?'danger':'warning'" size="small">{{ scope.row.severity }}</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="状态" width="90">
+                                    <template #default="scope">
+                                        <el-tag :type="scope.row.enabled?'success':'info'" size="small">{{ scope.row.enabled?'启用':'停用' }}</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="remark" label="备注" min-width="140"></el-table-column>
+                                <el-table-column label="操作" width="150" fixed="right">
+                                    <template #default="scope">
+                                        <el-button link type="warning" size="small" @click="toggleValidationRule(scope.row)">{{ scope.row.enabled?'停用':'启用' }}</el-button>
+                                        <el-button link type="primary" size="small" @click="openValidationRemark(scope.row)">备注</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-tab-pane>
+                        <el-tab-pane label="聚合白名单配置" name="aggwhite">
+                            <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <el-button type="primary" size="small" @click="openAggFieldForm(null)">新增维度</el-button>
+                                <el-button type="danger" size="small" @click="resetAggregateFields">恢复默认</el-button>
+                                <el-button size="small" @click="exportAggregateFields">导出</el-button>
+                                <el-upload :auto-upload="false" :show-file-list="false" :on-change="onImportAggFile" accept=".json,application/json" style="display:inline-block;">
+                                    <el-button size="small">导入</el-button>
+                                </el-upload>
+                                <span style="color:#888; font-size:12px;">禁用某维度后，统计页下拉将移除该维度且聚合接口返回 400</span>
+                            </div>
+                            <el-table :data="aggregateFieldsCfg" stripe border style="width:100%;" v-loading="configLoading">
+                                <el-table-column prop="field_key" label="字段键" min-width="160"></el-table-column>
+                                <el-table-column prop="field_label" label="展示名" min-width="110"></el-table-column>
+                                <el-table-column label="状态" width="90">
+                                    <template #default="scope">
+                                        <el-tag :type="scope.row.enabled?'success':'info'" size="small">{{ scope.row.enabled?'启用':'停用' }}</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="metric_support" label="支持指标" min-width="150"></el-table-column>
+                                <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
+                                <el-table-column label="操作" width="220" fixed="right">
+                                    <template #default="scope">
+                                        <el-button link type="primary" size="small" @click="openAggFieldForm(scope.row)">编辑</el-button>
+                                        <el-button link type="warning" size="small" @click="toggleAggregateField(scope.row)">{{ scope.row.enabled?'停用':'启用' }}</el-button>
+                                        <el-button link type="danger" size="small" @click="deleteAggregateField(scope.row)" :disabled="scope.row.is_system">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                            <el-dialog v-model="aggFieldDialogVisible" title="聚合维度" width="460px">
+                                <el-form label-width="90px">
+                                    <el-form-item label="字段键">
+                                        <el-select v-if="!aggFieldForm.id" v-model="aggFieldForm.field_key" filterable clearable placeholder="选择 Asset 合法列名" style="width:100%;">
+                                            <el-option v-for="c in aggFieldColumns" :key="c" :label="c" :value="c"></el-option>
+                                        </el-select>
+                                        <el-input v-else v-model="aggFieldForm.field_key" disabled></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="展示名">
+                                        <el-input v-model="aggFieldForm.field_label" placeholder="如 品牌"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="支持指标">
+                                        <el-input v-model="aggFieldForm.metric_support" placeholder="count,original_value"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="备注">
+                                        <el-input v-model="aggFieldForm.remark" type="textarea" :rows="2"></el-input>
+                                    </el-form-item>
+                                </el-form>
+                                <template #footer>
+                                    <el-button @click="aggFieldDialogVisible=false">取消</el-button>
+                                    <el-button type="primary" @click="saveAggField">保存</el-button>
+                                </template>
+                            </el-dialog>
+                        </el-tab-pane>
                     </el-tabs>
                 </div>
 
@@ -1259,6 +1389,42 @@
                     <template #footer>
                         <el-button @click="catDialogVisible=false">取消</el-button>
                         <el-button type="primary" @click="saveCategory">保存</el-button>
+                    </template>
+                </el-dialog>
+
+                <!-- 阶段流转规则编辑对话框 -->
+                <el-dialog v-model="stageDialogVisible" :title="stageForm.id?'编辑阶段流转规则':'新增阶段流转规则'" width="520px">
+                    <el-form :model="stageForm" label-width="110px">
+                        <el-form-item label="源阶段">
+                            <el-select v-model="stageForm.from_stage" placeholder="选择源阶段" :disabled="!!stageForm.id && stageForm.is_system" style="width:100%;">
+                                <el-option v-for="s in dropdowns.lifecycle_stages" :key="s" :label="s" :value="s"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="目标阶段">
+                            <el-select v-model="stageForm.to_stage" placeholder="选择目标阶段" :disabled="!!stageForm.id && stageForm.is_system" style="width:100%;">
+                                <el-option v-for="s in dropdowns.lifecycle_stages" :key="s" :label="s" :value="s"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="允许">
+                            <el-switch v-model="stageForm.allowed"></el-switch>
+                        </el-form-item>
+                        <el-form-item label="前置条件">
+                            <div>
+                                <el-checkbox v-model="stageForm.require_inspection">需验收合格</el-checkbox>
+                                <el-checkbox v-model="stageForm.require_location">需完整位置</el-checkbox>
+                                <el-checkbox v-model="stageForm.require_fault_record">需故障记录</el-checkbox>
+                                <el-checkbox v-model="stageForm.require_retirement">需退役单</el-checkbox>
+                                <el-checkbox v-model="stageForm.require_data_cleared">需数据清除</el-checkbox>
+                                <el-checkbox v-model="stageForm.require_approval">需审批(仅标记)</el-checkbox>
+                            </div>
+                        </el-form-item>
+                        <el-form-item label="备注">
+                            <el-input v-model="stageForm.remark" type="textarea" :rows="2"></el-input>
+                        </el-form-item>
+                    </el-form>
+                    <template #footer>
+                        <el-button @click="stageDialogVisible=false">取消</el-button>
+                        <el-button type="primary" @click="saveStageRule">保存</el-button>
                     </template>
                 </el-dialog>
             </template>
@@ -2240,6 +2406,272 @@ const app = createApp({
             } catch (e) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败'); }
         }
 
+        // ============ 系统配置模块 P1：阶段流转矩阵配置 ============
+        const stageRules = ref([]);
+        const stageDialogVisible = ref(false);
+        const stageForm = reactive({
+            id: null, from_stage: '', to_stage: '', allowed: true,
+            require_approval: true, require_fault_record: false, require_data_cleared: false,
+            require_retirement: false, require_inspection: false, require_location: false,
+            remark: '', sort_order: 0, is_system: false
+        });
+
+        // 矩阵视图（主理人拍板 O1：全部 11 对，禁用态灰显）
+        const stageMatrix = computed(() => {
+            const map = {};
+            for (const r of (stageRules.value || [])) {
+                if (!map[r.from_stage]) map[r.from_stage] = [];
+                map[r.from_stage].push({ to_stage: r.to_stage, allowed: r.allowed });
+            }
+            return Object.keys(map).map(from_stage => ({ from_stage, targets: map[from_stage] }));
+        });
+
+        // ===== 系统配置模块 P2：校验规则开关（design §3.4） =====
+        const validationRules = ref([]);
+        async function loadValidationRules() {
+            configLoading.value = true;
+            try { validationRules.value = await api('/api/config/validation-rules') || []; }
+            catch (e) { ElMessage.error(e.message || '校验规则加载失败'); }
+            finally { configLoading.value = false; }
+        }
+        async function toggleValidationRule(row) {
+            try {
+                await api('/api/config/validation-rules/' + row.id + '/toggle', { method: 'POST' });
+                ElMessage.success('操作成功');
+                await loadValidationRules();
+            } catch (e) { ElMessage.error(e.message || '操作失败'); }
+        }
+        async function openValidationRemark(row) {
+            try {
+                const val = await ElementPlus.ElMessageBox.prompt('备注（可空）', '编辑备注 - ' + row.check_name, { inputValue: row.remark || '', inputType: 'textarea' });
+                await api('/api/config/validation-rules/' + row.id, { method: 'PUT', body: JSON.stringify({ remark: val.value || null }) });
+                ElMessage.success('保存成功');
+                await loadValidationRules();
+            } catch (e) { if (e !== 'cancel') ElMessage.error(e.message || '保存失败'); }
+        }
+        async function resetValidationRules() {
+            try {
+                await ElementPlus.ElMessageBox.confirm('确认恢复默认？将启用全部系统校验并清除自定义项。', '恢复默认', { type: 'warning' });
+                await api('/api/config/validation-rules/reset', { method: 'POST' });
+                ElMessage.success('已恢复默认');
+                await loadValidationRules();
+            } catch (e) { if (e !== 'cancel') ElMessage.error(e.message || '操作失败'); }
+        }
+        async function exportValidationRules() {
+            try {
+                const rules = await api('/api/config/validation-rules/export');
+                const blob = new Blob([JSON.stringify(rules, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'validation_rules.json';
+                a.click(); URL.revokeObjectURL(url);
+                ElMessage.success('导出成功');
+            } catch (e) { ElMessage.error(e.message || '导出失败'); }
+        }
+        async function onImportValidationFile(file) {
+            try {
+                const text = await file.raw.text();
+                const data = JSON.parse(text);
+                const rules = Array.isArray(data) ? data : (data.rules || []);
+                if (!rules.length) { ElMessage.warning('文件中无规则'); return false; }
+                const res = await api('/api/config/validation-rules/import', { method: 'POST', body: JSON.stringify({ rules }) });
+                ElMessage.success(`导入完成：新增 ${res.created}，更新 ${res.updated}`);
+                await loadValidationRules();
+            } catch (e) { ElMessage.error(e.message || '导入失败'); }
+            return false;
+        }
+
+        // ===== 系统配置模块 P2：聚合维度白名单（design §3.4） =====
+        const aggregateFieldsCfg = ref([]);
+        const aggFieldDialogVisible = ref(false);
+        const aggFieldColumns = ref([]);
+        const aggFieldForm = reactive({ id: null, field_key: '', field_label: '', metric_support: 'count,original_value', remark: '', sort_order: 0, is_system: false });
+        async function loadAggregateFields() {
+            configLoading.value = true;
+            try { aggregateFieldsCfg.value = await api('/api/config/aggregate-fields') || []; }
+            catch (e) { ElMessage.error(e.message || '聚合维度加载失败'); }
+            finally { configLoading.value = false; }
+        }
+        async function loadAggFieldColumns() {
+            try { aggFieldColumns.value = await api('/api/config/aggregate-field-columns') || []; }
+            catch (e) { console.warn('聚合候选列加载失败', e); }
+        }
+        function openAggFieldForm(row) {
+            if (row) {
+                Object.assign(aggFieldForm, { id: row.id, field_key: row.field_key, field_label: row.field_label, metric_support: row.metric_support, remark: row.remark || '', sort_order: row.sort_order, is_system: row.is_system });
+            } else {
+                Object.assign(aggFieldForm, { id: null, field_key: '', field_label: '', metric_support: 'count,original_value', remark: '', sort_order: (aggregateFieldsCfg.value || []).length + 1, is_system: false });
+                loadAggFieldColumns();
+            }
+            aggFieldDialogVisible.value = true;
+        }
+        async function saveAggField() {
+            try {
+                if (!aggFieldForm.field_key || !aggFieldForm.field_label) { ElMessage.warning('请填写字段键与展示名'); return; }
+                if (aggFieldForm.id) {
+                    await api('/api/config/aggregate-fields/' + aggFieldForm.id, { method: 'PUT', body: JSON.stringify({ field_label: aggFieldForm.field_label, remark: aggFieldForm.remark || null }) });
+                } else {
+                    await api('/api/config/aggregate-fields', { method: 'POST', body: JSON.stringify({ field_key: aggFieldForm.field_key, field_label: aggFieldForm.field_label, metric_support: aggFieldForm.metric_support, remark: aggFieldForm.remark || null }) });
+                }
+                ElMessage.success('保存成功');
+                aggFieldDialogVisible.value = false;
+                await loadAggregateFields();
+                await loadAggregateDropdown();
+            } catch (e) { ElMessage.error(e.message || '保存失败'); }
+        }
+        async function toggleAggregateField(row) {
+            try {
+                await api('/api/config/aggregate-fields/' + row.id + '/toggle', { method: 'POST' });
+                ElMessage.success('操作成功');
+                await loadAggregateFields();
+                await loadAggregateDropdown();
+            } catch (e) { ElMessage.error(e.message || '操作失败'); }
+        }
+        async function deleteAggregateField(row) {
+            try {
+                await ElementPlus.ElMessageBox.confirm('确认删除该聚合维度？系统内置维度不可删。', '删除确认', { type: 'warning' });
+                await api('/api/config/aggregate-fields/' + row.id, { method: 'DELETE' });
+                ElMessage.success('删除成功');
+                await loadAggregateFields();
+                await loadAggregateDropdown();
+            } catch (e) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败'); }
+        }
+        async function resetAggregateFields() {
+            try {
+                await ElementPlus.ElMessageBox.confirm('确认恢复默认？将启用全部系统聚合维度并清除自定义项。', '恢复默认', { type: 'warning' });
+                await api('/api/config/aggregate-fields/reset', { method: 'POST' });
+                ElMessage.success('已恢复默认');
+                await loadAggregateFields();
+                await loadAggregateDropdown();
+            } catch (e) { if (e !== 'cancel') ElMessage.error(e.message || '操作失败'); }
+        }
+        async function exportAggregateFields() {
+            try {
+                const fields = await api('/api/config/aggregate-fields/export');
+                const blob = new Blob([JSON.stringify(fields, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'aggregate_fields.json';
+                a.click(); URL.revokeObjectURL(url);
+                ElMessage.success('导出成功');
+            } catch (e) { ElMessage.error(e.message || '导出失败'); }
+        }
+        async function onImportAggFile(file) {
+            try {
+                const text = await file.raw.text();
+                const data = JSON.parse(text);
+                const fields = Array.isArray(data) ? data : (data.fields || []);
+                if (!fields.length) { ElMessage.warning('文件中无维度'); return false; }
+                const res = await api('/api/config/aggregate-fields/import', { method: 'POST', body: JSON.stringify({ fields }) });
+                ElMessage.success(`导入完成：新增 ${res.created}，更新 ${res.updated}`);
+                await loadAggregateFields();
+                await loadAggregateDropdown();
+            } catch (e) { ElMessage.error(e.message || '导入失败'); }
+            return false;
+        }
+
+        async function loadStageTransitions() {
+            configLoading.value = true;
+            try {
+                stageRules.value = await api('/api/config/stage-transitions') || [];
+            } catch (e) { ElMessage.error(e.message || '阶段流转规则加载失败'); }
+            finally { configLoading.value = false; }
+        }
+
+        function onConfigSubTabChange(name) {
+            if (name === 'stage') loadStageTransitions();
+            if (name === 'valswitch') loadValidationRules();
+            if (name === 'aggwhite') loadAggregateFields();
+        }
+
+        function openStageForm(row) {
+            if (row) {
+                Object.assign(stageForm, {
+                    id: row.id, from_stage: row.from_stage, to_stage: row.to_stage,
+                    allowed: row.allowed, require_approval: row.require_approval,
+                    require_fault_record: row.require_fault_record, require_data_cleared: row.require_data_cleared,
+                    require_retirement: row.require_retirement, require_inspection: row.require_inspection,
+                    require_location: row.require_location, remark: row.remark || '',
+                    sort_order: row.sort_order, is_system: row.is_system
+                });
+            } else {
+                Object.assign(stageForm, {
+                    id: null, from_stage: '', to_stage: '', allowed: true, require_approval: true,
+                    require_fault_record: false, require_data_cleared: false, require_retirement: false,
+                    require_inspection: false, require_location: false, remark: '',
+                    sort_order: (stageRules.value || []).length + 1, is_system: false
+                });
+            }
+            stageDialogVisible.value = true;
+        }
+
+        async function saveStageRule() {
+            try {
+                if (!stageForm.from_stage || !stageForm.to_stage) { ElMessage.warning('请选择源阶段与目标阶段'); return; }
+                const payload = {
+                    from_stage: stageForm.from_stage, to_stage: stageForm.to_stage, allowed: stageForm.allowed,
+                    require_approval: stageForm.require_approval, require_fault_record: stageForm.require_fault_record,
+                    require_data_cleared: stageForm.require_data_cleared, require_retirement: stageForm.require_retirement,
+                    require_inspection: stageForm.require_inspection, require_location: stageForm.require_location,
+                    remark: stageForm.remark || null, sort_order: stageForm.sort_order
+                };
+                if (stageForm.id) {
+                    await api('/api/config/stage-transitions/' + stageForm.id, { method: 'PUT', body: JSON.stringify(payload) });
+                } else {
+                    await api('/api/config/stage-transitions', { method: 'POST', body: JSON.stringify(payload) });
+                }
+                ElMessage.success('保存成功');
+                stageDialogVisible.value = false;
+                await loadStageTransitions();
+                await loadDropdowns();
+            } catch (e) { ElMessage.error(e.message || '保存失败'); }
+        }
+
+        async function toggleStageRule(row) {
+            try {
+                await api('/api/config/stage-transitions/' + row.id + '/toggle', { method: 'POST' });
+                ElMessage.success('操作成功');
+                await loadStageTransitions();
+                await loadDropdowns();
+            } catch (e) { ElMessage.error(e.message || '操作失败'); }
+        }
+
+        async function deleteStageRule(row) {
+            try {
+                await ElementPlus.ElMessageBox.confirm('确认删除该流转规则？系统内置规则不可删。', '删除确认', { type: 'warning' });
+                await api('/api/config/stage-transitions/' + row.id, { method: 'DELETE' });
+                ElMessage.success('删除成功');
+                await loadStageTransitions();
+                await loadDropdowns();
+            } catch (e) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败'); }
+        }
+
+        async function exportStageRules() {
+            try {
+                const rules = await api('/api/config/stage-transitions/export');
+                const blob = new Blob([JSON.stringify(rules, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'stage_transitions.json';
+                a.click(); URL.revokeObjectURL(url);
+                ElMessage.success('导出成功');
+            } catch (e) { ElMessage.error(e.message || '导出失败'); }
+        }
+
+        async function onImportStageFile(file) {
+            try {
+                const text = await file.raw.text();
+                const data = JSON.parse(text);
+                const rules = Array.isArray(data) ? data : (data.rules || []);
+                if (!rules.length) { ElMessage.warning('文件中无规则'); return false; }
+                const res = await api('/api/config/stage-transitions/import', { method: 'POST', body: JSON.stringify({ rules }) });
+                ElMessage.success(`导入完成：新增 ${res.created}，更新 ${res.updated}`);
+                await loadStageTransitions();
+                await loadDropdowns();
+            } catch (e) { ElMessage.error(e.message || '导入失败'); }
+            return false; // 阻止 el-upload 默认上传
+        }
+
         // 搜索选项（各字段去重值）
         const distinctValues = reactive({
             brands: [], models: [], locations: [], ip_addresses: [],
@@ -2765,7 +3197,8 @@ const app = createApp({
         const trendMonths = ref(12);
         const isBackfill = ref(false);
         // 自定义字段聚合白名单（与后端 AGGREGATE_FIELD_WHITELIST 一致）
-        const aggregateFields = [
+        // 聚合维度下拉：默认出厂 11 字段；进入看板时由 GET /api/stats/aggregate-fields 动态刷新（P2 aggwhite 配置）
+        const aggregateFields = ref([
             { value: 'lifecycle_stage', label: '生命周期阶段' },
             { value: 'asset_category', label: '资产分类' },
             { value: 'room', label: '机房' },
@@ -2777,7 +3210,17 @@ const app = createApp({
             { value: 'responsible_person', label: '责任人' },
             { value: 'warranty_status', label: '维保状态' },
             { value: 'project_name', label: '项目名称' },
-        ];
+        ]);
+
+        // P2：统计页聚合下拉改为读启用维度（被禁用维度实时移除）；接口失败则保留默认列表（降级）
+        async function loadAggregateDropdown() {
+            try {
+                const fields = await api('/api/stats/aggregate-fields');
+                if (Array.isArray(fields) && fields.length) {
+                    aggregateFields.value = fields;
+                }
+            } catch (e) { console.warn('聚合维度下拉加载失败，使用默认列表', e); }
+        }
         // ECharts 实例托管数组（统一生命周期管理，防内存泄漏）
         let charts = [];
 
@@ -2874,6 +3317,8 @@ const app = createApp({
 
         async function loadStats() {
             try {
+                // P2：进入看板即刷新聚合维度下拉（读启用维度，被禁用维度实时移除；失败降级默认列表）
+                await loadAggregateDropdown();
                 // S-12 联动下钻：选中阶段/分类时透传过滤参数（默认 None 行为不变，不破坏既有回归）
                 const stageParam = selectedStage.value ? `&stage=${encodeURIComponent(selectedStage.value)}` : '';
                 const catParam = selectedCategory.value ? `&category=${encodeURIComponent(selectedCategory.value)}` : '';
@@ -3591,7 +4036,18 @@ const app = createApp({
             configDomains, configDomainGroups,
             loadConfig, onConfigDomainChange, selectConfigGroup, loadDictionaries,
             openDictForm, saveDictionary, toggleDictionary, deleteDictionary,
-            openCatForm, saveCategory, toggleCategory, deleteCategory
+            openCatForm, saveCategory, toggleCategory, deleteCategory,
+            // 系统配置模块 P1：阶段流转矩阵配置
+            stageRules, stageDialogVisible, stageForm, stageMatrix,
+            onConfigSubTabChange, loadStageTransitions, openStageForm, saveStageRule,
+            toggleStageRule, deleteStageRule, exportStageRules, onImportStageFile,
+            // 系统配置模块 P2：校验规则开关 + 聚合白名单配置
+            validationRules, loadValidationRules, toggleValidationRule, openValidationRemark,
+            resetValidationRules, exportValidationRules, onImportValidationFile,
+            aggregateFieldsCfg, aggFieldDialogVisible, aggFieldColumns, aggFieldForm,
+            loadAggregateFields, loadAggFieldColumns, openAggFieldForm, saveAggField, toggleAggregateField,
+            deleteAggregateField, resetAggregateFields, exportAggregateFields, onImportAggFile,
+            loadAggregateDropdown
         };
     }
 });

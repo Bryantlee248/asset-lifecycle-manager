@@ -6,6 +6,8 @@
   * 运行期枚举唯一真相 = dictionaries / categories 表；本模块 `_enum_cache`
     仅为「启动期 / 写后」的内存镜像（仅含 enabled 值）。
 """
+from typing import Optional
+
 from sqlalchemy import func
 
 from database import (
@@ -13,11 +15,17 @@ from database import (
     Dictionary, Category,
     Asset, AssetInbound, AssetOutbound, Change,
     Fault, Warranty, Retirement, Procurement,
+    StageTransitionRule,
+    ValidationRuleSwitch, AggregateWhitelist,
 )
+from constants import AGGREGATE_FIELD_WHITELIST
 
 # ============ 模块级缓存 ============
 _enum_cache: dict = {}            # group_code / "category" -> set(enabled 值)
 _category_code_cache: dict = {}   # category_name -> category_code
+_stage_rules_cache: list = []    # 阶段流转规则 list[dict]（design §3.4 门禁单一数据源）
+_validation_rules_cache: Optional[list] = None   # 校验开关 list[dict]（P2，None=未建）
+_aggregate_fields_cache: Optional[list] = None   # 聚合白名单 list[dict]（P2，None=未建）
 _initialized: bool = False
 
 
@@ -130,8 +138,117 @@ def build_enum_cache(db) -> None:
 
 
 def invalidate_and_rebuild(db) -> None:
-    """配置写 API 成功后调用，重建缓存（design §8-2）。"""
+    """配置写 API 成功后调用，重建缓存（design §8-2）。
+
+    同时重建枚举缓存、阶段流转规则缓存（P1）、校验开关缓存与聚合白名单缓存（P2）。
+    """
     build_enum_cache(db)
+    build_stage_gate_cache(db)
+    build_validation_rules_cache(db)
+    build_aggregate_fields_cache(db)
+
+
+# ============ 阶段流转矩阵缓存（design §3.4 / P1） ============
+def build_stage_gate_cache(db) -> None:
+    """构建阶段流转规则缓存：全量 stage_transition_rule 行 -> list[dict]（design §3.4）。
+
+    lifespan / 写后 invalidate_and_rebuild 调用；check_stage_gate 优先读此缓存。
+    """
+    global _stage_rules_cache
+    rows = db.query(StageTransitionRule).order_by(
+        StageTransitionRule.from_stage,
+        StageTransitionRule.sort_order,
+        StageTransitionRule.id,
+    ).all()
+    _stage_rules_cache = [r.to_dict() for r in rows]
+
+
+def get_gate_rule(from_stage: str, to_stage: str):
+    """返回 (from_stage, to_stage) 匹配的规则 dict；无匹配返回 None。"""
+    for r in _stage_rules_cache:
+        if r.get("from_stage") == from_stage and r.get("to_stage") == to_stage:
+            return r
+    return None
+
+
+def get_allowed_targets(from_stage: str) -> list:
+    """返回该阶段所有 allowed=true 的出口 to_stage 列表（design §3.4）。"""
+    return [
+        r["to_stage"] for r in _stage_rules_cache
+        if r.get("from_stage") == from_stage and r.get("allowed")
+    ]
+
+
+# ============ 校验规则开关缓存（系统配置模块 P2，design §3.5） ============
+def build_validation_rules_cache(db) -> None:
+    """构建校验开关缓存：全量 validation_rule_switch 行 -> list[dict]。
+
+    lifespan / 写后 invalidate_and_rebuild 调用；run_all_checks 优先读此缓存。
+    """
+    global _validation_rules_cache
+    rows = db.query(ValidationRuleSwitch).order_by(
+        ValidationRuleSwitch.sort_order,
+        ValidationRuleSwitch.id,
+    ).all()
+    _validation_rules_cache = [r.to_dict() for r in rows]
+
+
+def get_enabled_validation_rule_keys() -> Optional[set]:
+    """返回当前 enabled=true 的 rule_key 集合；缓存未建返回 None（design §3.5）。
+
+    返回 None 时调用方应触发 build_validation_rules_cache 并重新读取。
+    """
+    if _validation_rules_cache is None:
+        return None
+    return {r["rule_key"] for r in _validation_rules_cache if r.get("enabled")}
+
+
+# ============ 聚合维度白名单缓存（系统配置模块 P2，design §3.6） ============
+def build_aggregate_fields_cache(db) -> None:
+    """构建聚合白名单缓存：全量 aggregate_whitelist 行 -> list[dict]。
+
+    lifespan / 写后 invalidate_and_rebuild 调用；get_aggregate 优先读此缓存。
+    """
+    global _aggregate_fields_cache
+    rows = db.query(AggregateWhitelist).order_by(
+        AggregateWhitelist.sort_order,
+        AggregateWhitelist.id,
+    ).all()
+    _aggregate_fields_cache = [r.to_dict() for r in rows]
+
+
+def is_valid_aggregate_field(field: Optional[str]):
+    """校验 field 是否为启用中的聚合维度（design §3.6）。
+
+    返回 True/False；缓存未建返回 None（调用方应触发 build 并重新读取）。
+
+    表已建但为空（极端未 seed 场景）时回退常量 AGGREGATE_FIELD_WHITELIST，
+    保证聚合接口不崩溃（design §2 保留回退常量）。
+    """
+    if _aggregate_fields_cache is None:
+        return None
+    if not _aggregate_fields_cache:
+        return field in AGGREGATE_FIELD_WHITELIST
+    if field is None:
+        return False
+    return any(
+        r.get("field_key") == field and r.get("enabled")
+        for r in _aggregate_fields_cache
+    )
+
+
+def get_enabled_aggregate_fields() -> Optional[list]:
+    """返回当前 enabled=true 的聚合维度 [{value, label}]（design §3.6，供统计页下拉）。
+
+    缓存未建返回 None。
+    """
+    if _aggregate_fields_cache is None:
+        return None
+    return [
+        {"value": r["field_key"], "label": r["field_label"]}
+        for r in _aggregate_fields_cache if r.get("enabled")
+    ]
+
 
 
 # ============ 查询辅助（带健壮回退） ============

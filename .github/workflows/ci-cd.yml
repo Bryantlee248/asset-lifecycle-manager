@@ -1,0 +1,107 @@
+name: ci-cd
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          python -m pip install -r requirements.txt
+
+      - name: Run smoke tests
+        env:
+          ENV: production
+          JWT_SECRET_KEY: ci-only-secret
+          DEFAULT_ADMIN_PASSWORD: ci-only-password
+          CORS_ORIGINS: http://127.0.0.1:8081
+        run: |
+          python -m compileall backend
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, 'backend')
+          import main
+          print(f'import_ok={main.app.title}')
+          PY
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Package release
+        run: |
+          tar -czf "$RUNNER_TEMP/asset-lifecycle-manager.tgz" \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=.worktrees \
+            --exclude=.pytest_cache \
+            --exclude=__pycache__ \
+            --exclude='*.pyc' \
+            --exclude=.env \
+            --exclude=.venv \
+            --exclude=.jwt_secret \
+            --exclude=.jwt_dev_key \
+            --exclude='*.db' \
+            --exclude='*.db-wal' \
+            --exclude='*.db-shm' \
+            --exclude='*.log' \
+            --exclude='dashboard-preview-*.png' \
+            --exclude='login-preview*.png' \
+            -C "$GITHUB_WORKSPACE" .
+
+      - name: Install SSH key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Add deploy host key
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload release package
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          scp -i ~/.ssh/deploy_key -P "${DEPLOY_PORT:-22}" "$RUNNER_TEMP/asset-lifecycle-manager.tgz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/asset-lifecycle-manager.tgz"
+
+      - name: Deploy to server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          cat deploy/github-actions-deploy.sh | ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT:-22}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "PUBLIC_URL='${PUBLIC_URL}' SOURCE_SHA='${GITHUB_SHA}' bash -s"

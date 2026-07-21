@@ -33,8 +33,10 @@ from approval import (
 )
 from workflow_engine import WorkflowEngine
 from seed_workflow_templates import seed_workflow_templates
-from config_cache import build_enum_cache, DROPDOWN_FIELD_TO_SOURCE
+from config_cache import build_enum_cache, invalidate_and_rebuild, DROPDOWN_FIELD_TO_SOURCE
 from seed_config_dict import seed_config_dict
+from seed_stage_transitions import seed_stage_transitions
+from seed_p2_config import seed_p2_config
 from import_export_reports import (
     import_assets_excel, import_subtable_excel,
     export_assets_excel, export_subtable_excel, download_import_template,
@@ -65,6 +67,7 @@ from schemas import (
 )
 from validation import run_all_checks, check_stage_gate
 from settings import load_settings
+from audit import record_audit
 from constants import (
     LIFECYCLE_STAGES, ACTIVE_STAGES,
     APPROVAL_TYPES, APPROVAL_TYPE_NAMES, APPROVAL_STATUSES
@@ -98,6 +101,44 @@ def parse_location(loc_str: str) -> dict:
     return result
 
 
+def _audit_create(db: Session, current_user: User, resource_type: str, resource_id: str, after: dict) -> None:
+    record_audit(
+        db,
+        current_user.id,
+        "create",
+        resource_type,
+        resource_id,
+        {"after": after},
+    )
+
+
+def _audit_update(
+    db: Session, current_user: User, resource_type: str, resource_id: str,
+    before: dict, after: dict,
+) -> None:
+    record_audit(
+        db,
+        current_user.id,
+        "update",
+        resource_type,
+        resource_id,
+        {"before": before, "after": after},
+    )
+
+
+def _audit_delete(
+    db: Session, current_user: User, resource_type: str, resource_id: str, before: dict
+) -> None:
+    record_audit(
+        db,
+        current_user.id,
+        "delete",
+        resource_type,
+        resource_id,
+        {"before": before},
+    )
+
+
 # ============ Lifespan ============
 @asynccontextmanager
 async def lifespan(app):
@@ -107,7 +148,9 @@ async def lifespan(app):
         seed_workflow_templates(db)
         # 系统配置模块 P0：种子字典/分类 + 启动期构建枚举缓存（单一数据源）
         seed_config_dict(db)
-        build_enum_cache(db)
+        seed_stage_transitions(db)
+        seed_p2_config(db)
+        invalidate_and_rebuild(db)
     finally:
         db.close()
     yield
@@ -245,6 +288,8 @@ async def create_user(
         user.roles = roles
 
     db.add(user)
+    db.flush()
+    _audit_create(db, current_user, "user", str(user.id), data.model_dump())
     db.commit()
     db.refresh(user)
     return _build_user_response(user)
@@ -260,6 +305,16 @@ async def update_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
+
+    update_data = data.model_dump(exclude_unset=True)
+    previous = {
+        key: "[REDACTED]"
+        if key == "password"
+        else [role.id for role in user.roles]
+        if key == "role_ids"
+        else getattr(user, key)
+        for key in update_data
+    }
 
     if data.real_name is not None:
         user.real_name = data.real_name
@@ -278,6 +333,7 @@ async def update_user(
         user.roles = roles
 
     user.updated_at = datetime.now()
+    _audit_update(db, current_user, "user", str(user.id), previous, update_data)
     db.commit()
     db.refresh(user)
     return _build_user_response(user)
@@ -302,7 +358,11 @@ async def delete_user(
         if admin_count <= 1:
             raise HTTPException(status_code=400, detail="系统至少需要保留一个活跃管理员账号")
 
+    previous = {"status": user.status}
     user.status = "disabled"
+    _audit_update(
+        db, current_user, "user", str(user.id), previous, {"status": user.status}
+    )
     db.commit()
     return {"message": "用户已禁用"}
 
@@ -320,6 +380,14 @@ async def reset_password(
     import secrets as _secrets
     pwd = data.new_password or _secrets.token_urlsafe(12)
     user.password_hash = hash_password(pwd)
+    _audit_update(
+        db,
+        current_user,
+        "user",
+        str(user.id),
+        {"password": "[REDACTED]"},
+        {"password": "[REDACTED]"},
+    )
     db.commit()
     if data.new_password is None:
         return {"message": "密码已自动生成并重置，请通过安全渠道通知用户", "generated": True}
@@ -377,6 +445,8 @@ async def create_role(
         permissions=json.dumps(data.permissions, ensure_ascii=False),
     )
     db.add(role)
+    db.flush()
+    _audit_create(db, current_user, "role", str(role.id), data.model_dump())
     db.commit()
     db.refresh(role)
     return RoleResponse(
@@ -397,6 +467,9 @@ async def update_role(
     if not role:
         raise HTTPException(status_code=404, detail="角色不存在")
 
+    update_data = data.model_dump(exclude_unset=True)
+    previous = {key: getattr(role, key) for key in update_data}
+
     if data.name is not None:
         role.name = data.name
     if data.description is not None:
@@ -405,6 +478,7 @@ async def update_role(
         role.permissions = json.dumps(data.permissions, ensure_ascii=False)
 
     role.updated_at = datetime.now()
+    _audit_update(db, current_user, "role", str(role.id), previous, update_data)
     db.commit()
     db.refresh(role)
     perms = json.loads(role.permissions) if role.permissions else []
@@ -432,6 +506,13 @@ async def delete_role(
     if len(role.users) > 0:
         raise HTTPException(status_code=400, detail="该角色下还有用户，不可删除")
 
+    _audit_delete(
+        db,
+        current_user,
+        "role",
+        str(role.id),
+        {"code": role.code, "name": role.name},
+    )
     db.delete(role)
     db.commit()
     return {"message": "删除成功"}
@@ -676,6 +757,8 @@ async def create_asset(data: AssetCreate, db: Session = Depends(get_db), current
             raise HTTPException(status_code=400, detail=f"SN序列号 {data.sn} 已被资产 {existing_sn.asset_code} 使用")
     asset = Asset(**data.model_dump())
     db.add(asset)
+    db.flush()
+    _audit_create(db, current_user, "asset", asset.asset_code, data.model_dump())
     db.commit()
     db.refresh(asset)
     return asset
@@ -700,9 +783,11 @@ async def update_asset(asset_id: int, data: AssetUpdate, db: Session = Depends(g
             raise HTTPException(status_code=400, detail=gate_result["message"])
 
     update_data = data.model_dump(exclude_unset=True)
+    previous = {key: getattr(asset, key) for key in update_data}
     for key, value in update_data.items():
         setattr(asset, key, value)
     asset.last_updated = datetime.now()
+    _audit_update(db, current_user, "asset", asset.asset_code, previous, update_data)
     db.commit()
     db.refresh(asset)
     return asset
@@ -722,15 +807,13 @@ async def delete_asset(asset_id: int, db: Session = Depends(get_db), current_use
         db.query(ApprovalNotification).filter(ApprovalNotification.request_id == apr.id).delete()
         db.query(ApprovalStep).filter(ApprovalStep.request_id == apr.id).delete()
         db.delete(apr)
-    # 记录审计日志
-    audit_log = AuditLog(
-        user_id=current_user.id,
-        action="delete",
-        resource_type="asset",
-        resource_id=asset.asset_code,
-        detail=f"删除资产: {asset.asset_code} ({asset.asset_category})"
+    _audit_delete(
+        db,
+        current_user,
+        "asset",
+        asset.asset_code,
+        {"asset_category": asset.asset_category, "sn": asset.sn},
     )
-    db.add(audit_log)
     db.delete(asset)
     db.commit()
     return {"message": "删除成功"}
@@ -779,6 +862,8 @@ async def create_procurement(data: ProcurementCreate, db: Session = Depends(get_
         data.total_price = data.quantity * data.unit_price
     item = Procurement(**data.model_dump())
     db.add(item)
+    db.flush()
+    _audit_create(db, current_user, "procurement", str(item.id), data.model_dump())
     db.commit()
     db.refresh(item)
     return item
@@ -795,11 +880,13 @@ async def update_procurement(item_id: int, data: ProcurementUpdate, db: Session 
         if not asset:
             raise HTTPException(status_code=400, detail=f"资产编号 {data.asset_code} 不存在")
     update_data = data.model_dump(exclude_unset=True)
+    previous = {key: getattr(item, key) for key in update_data}
     for key, value in update_data.items():
         setattr(item, key, value)
     # 自动计算总价
     if item.quantity and item.unit_price:
         item.total_price = item.quantity * item.unit_price
+    _audit_update(db, current_user, "procurement", str(item.id), previous, update_data)
     db.commit()
     db.refresh(item)
     return item
@@ -810,6 +897,9 @@ async def delete_procurement(item_id: int, db: Session = Depends(get_db), curren
     item = db.query(Procurement).filter(Procurement.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="记录不存在")
+    _audit_delete(
+        db, current_user, "procurement", str(item.id), {"asset_code": item.asset_code}
+    )
     db.delete(item)
     db.commit()
     return {"message": "删除成功"}
@@ -896,6 +986,7 @@ async def create_asset_inbound(data: InboundCreate, db: Session = Depends(get_db
         )
         item.asset_code = generated_code
 
+    _audit_create(db, current_user, "asset_inbound", str(item.id), data.model_dump())
     db.commit()
     db.refresh(item)
     return item
@@ -911,6 +1002,7 @@ async def update_asset_inbound(id: int, data: InboundUpdate, db: Session = Depen
     # 检查是否inspection_result从非"合格"变为"合格"
     old_inspection = item.inspection_result
     update_data = data.model_dump(exclude_unset=True)
+    previous = {key: getattr(item, key) for key in update_data}
     for key, value in update_data.items():
         setattr(item, key, value)
 
@@ -970,6 +1062,7 @@ async def update_asset_inbound(id: int, data: InboundUpdate, db: Session = Depen
             item.asset_code = generated_code
 
     item.updated_at = datetime.now()
+    _audit_update(db, current_user, "asset_inbound", str(item.id), previous, update_data)
     db.commit()
     db.refresh(item)
     return item
@@ -981,6 +1074,13 @@ async def delete_asset_inbound(id: int, db: Session = Depends(get_db), current_u
     item = db.query(AssetInbound).filter(AssetInbound.id == id).first()
     if not item:
         raise HTTPException(status_code=404, detail="移入记录不存在")
+    _audit_delete(
+        db,
+        current_user,
+        "asset_inbound",
+        str(item.id),
+        {"asset_code": item.asset_code, "inbound_no": item.inbound_no},
+    )
     db.delete(item)
     db.commit()
     return {"message": "删除成功"}
@@ -1052,6 +1152,7 @@ async def create_asset_outbound(data: OutboundCreate, db: Session = Depends(get_
             else:
                 item.remarks = f"[自动审批单: {auto_result['request_no']}]"
 
+    _audit_create(db, current_user, "asset_outbound", str(item.id), data.model_dump())
     db.commit()
     db.refresh(item)
     return item
@@ -1064,9 +1165,11 @@ async def update_asset_outbound(id: int, data: OutboundUpdate, db: Session = Dep
     if not item:
         raise HTTPException(status_code=404, detail="移出记录不存在")
     update_data = data.model_dump(exclude_unset=True)
+    previous = {key: getattr(item, key) for key in update_data}
     for key, value in update_data.items():
         setattr(item, key, value)
     item.updated_at = datetime.now()
+    _audit_update(db, current_user, "asset_outbound", str(item.id), previous, update_data)
     db.commit()
     db.refresh(item)
     return item
@@ -1078,6 +1181,13 @@ async def delete_asset_outbound(id: int, db: Session = Depends(get_db), current_
     item = db.query(AssetOutbound).filter(AssetOutbound.id == id).first()
     if not item:
         raise HTTPException(status_code=404, detail="移出记录不存在")
+    _audit_delete(
+        db,
+        current_user,
+        "asset_outbound",
+        str(item.id),
+        {"asset_code": item.asset_code, "outbound_no": item.outbound_no},
+    )
     db.delete(item)
     db.commit()
     return {"message": "删除成功"}
@@ -1108,6 +1218,8 @@ async def create_change(data: ChangeCreate, db: Session = Depends(get_db), curre
         raise HTTPException(status_code=400, detail="已报废资产不允许创建变更记录")
     item = Change(**data.model_dump())
     db.add(item)
+    db.flush()
+    _audit_create(db, current_user, "change", str(item.id), data.model_dump())
     db.commit()
     db.refresh(item)
     return item
@@ -1119,8 +1231,10 @@ async def update_change(item_id: int, data: ChangeUpdate, db: Session = Depends(
     if not item:
         raise HTTPException(status_code=404, detail="记录不存在")
     update_data = data.model_dump(exclude_unset=True)
+    previous = {key: getattr(item, key) for key in update_data}
     for key, value in update_data.items():
         setattr(item, key, value)
+    _audit_update(db, current_user, "change", str(item.id), previous, update_data)
     db.commit()
     db.refresh(item)
     return item
@@ -1131,6 +1245,7 @@ async def delete_change(item_id: int, db: Session = Depends(get_db), current_use
     item = db.query(Change).filter(Change.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="记录不存在")
+    _audit_delete(db, current_user, "change", str(item.id), {"asset_code": item.asset_code})
     db.delete(item)
     db.commit()
     return {"message": "删除成功"}
@@ -1161,6 +1276,7 @@ async def create_fault(data: FaultCreate, db: Session = Depends(get_db), current
         raise HTTPException(status_code=400, detail="已报废资产不允许创建故障记录")
     item = Fault(**data.model_dump())
     db.add(item)
+    db.flush()
     # P1/P2-严重故障降级流程（P2-严重替代原P2）
     if data.fault_level in ["P1", "P2-严重"] and asset.lifecycle_stage in ["上架", "运行", "在途"]:
         original_stage = asset.lifecycle_stage
@@ -1178,6 +1294,7 @@ async def create_fault(data: FaultCreate, db: Session = Depends(get_db), current
                 item.remarks += approval_note
             else:
                 item.remarks = approval_note
+    _audit_create(db, current_user, "fault", str(item.id), data.model_dump())
     db.commit()
     db.refresh(item)
     return item
@@ -1189,8 +1306,10 @@ async def update_fault(item_id: int, data: FaultUpdate, db: Session = Depends(ge
     if not item:
         raise HTTPException(status_code=404, detail="记录不存在")
     update_data = data.model_dump(exclude_unset=True)
+    previous = {key: getattr(item, key) for key in update_data}
     for key, value in update_data.items():
         setattr(item, key, value)
+    _audit_update(db, current_user, "fault", str(item.id), previous, update_data)
     db.commit()
     db.refresh(item)
     return item
@@ -1201,6 +1320,7 @@ async def delete_fault(item_id: int, db: Session = Depends(get_db), current_user
     item = db.query(Fault).filter(Fault.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="记录不存在")
+    _audit_delete(db, current_user, "fault", str(item.id), {"asset_code": item.asset_code})
     db.delete(item)
     db.commit()
     return {"message": "删除成功"}
@@ -1231,6 +1351,8 @@ async def create_warranty(data: WarrantyCreate, db: Session = Depends(get_db), c
         raise HTTPException(status_code=400, detail="已报废资产不允许创建维保记录")
     item = Warranty(**data.model_dump())
     db.add(item)
+    db.flush()
+    _audit_create(db, current_user, "warranty", str(item.id), data.model_dump())
     db.commit()
     db.refresh(item)
     return item
@@ -1242,8 +1364,10 @@ async def update_warranty(item_id: int, data: WarrantyUpdate, db: Session = Depe
     if not item:
         raise HTTPException(status_code=404, detail="记录不存在")
     update_data = data.model_dump(exclude_unset=True)
+    previous = {key: getattr(item, key) for key in update_data}
     for key, value in update_data.items():
         setattr(item, key, value)
+    _audit_update(db, current_user, "warranty", str(item.id), previous, update_data)
     db.commit()
     db.refresh(item)
     return item
@@ -1254,6 +1378,7 @@ async def delete_warranty(item_id: int, db: Session = Depends(get_db), current_u
     item = db.query(Warranty).filter(Warranty.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="记录不存在")
+    _audit_delete(db, current_user, "warranty", str(item.id), {"asset_code": item.asset_code})
     db.delete(item)
     db.commit()
     return {"message": "删除成功"}
@@ -1286,6 +1411,8 @@ async def create_retirement(data: RetirementCreate, db: Session = Depends(get_db
             raise HTTPException(status_code=400, detail="已报废资产已有退役记录，不允许重复创建")
     item = Retirement(**data.model_dump())
     db.add(item)
+    db.flush()
+    _audit_create(db, current_user, "retirement", str(item.id), data.model_dump())
     db.commit()
     db.refresh(item)
     return item
@@ -1297,8 +1424,10 @@ async def update_retirement(item_id: int, data: RetirementUpdate, db: Session = 
     if not item:
         raise HTTPException(status_code=404, detail="记录不存在")
     update_data = data.model_dump(exclude_unset=True)
+    previous = {key: getattr(item, key) for key in update_data}
     for key, value in update_data.items():
         setattr(item, key, value)
+    _audit_update(db, current_user, "retirement", str(item.id), previous, update_data)
     db.commit()
     db.refresh(item)
     return item
@@ -1309,6 +1438,7 @@ async def delete_retirement(item_id: int, db: Session = Depends(get_db), current
     item = db.query(Retirement).filter(Retirement.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="记录不存在")
+    _audit_delete(db, current_user, "retirement", str(item.id), {"asset_code": item.asset_code})
     db.delete(item)
     db.commit()
     return {"message": "删除成功"}
@@ -1391,7 +1521,17 @@ async def api_import_assets(file: UploadFile = File(...), db: Session = Depends(
     """批量导入资产台账（Excel文件上传）"""
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(400, "仅支持xlsx/xls格式文件")
-    return await import_assets_excel(file, db)
+    result = await import_assets_excel(file, db)
+    record_audit(
+        db,
+        current_user.id,
+        "import",
+        "import",
+        "assets",
+        {"result": result},
+    )
+    db.commit()
+    return result
 
 
 @app.post("/api/import/{table_type}")
@@ -1399,7 +1539,17 @@ async def api_import_subtable(table_type: str, file: UploadFile = File(...), db:
     """批量导入分表数据"""
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(400, "仅支持xlsx/xls格式文件")
-    return await import_subtable_excel(file, table_type, db)
+    result = await import_subtable_excel(file, table_type, db)
+    record_audit(
+        db,
+        current_user.id,
+        "import",
+        "import",
+        table_type,
+        {"result": result},
+    )
+    db.commit()
+    return result
 
 
 # ============ 批量导出 ============
@@ -1531,6 +1681,14 @@ async def create_approval_request(data: ApprovalRequestCreate, db: Session = Dep
         applicant_id=current_user.id,
     )
     db.add(request)
+    db.flush()
+    _audit_create(
+        db,
+        current_user,
+        "approval_request",
+        str(request.id),
+        data.model_dump(),
+    )
     db.commit()
     db.refresh(request)
 
@@ -1758,10 +1916,31 @@ async def get_workflow_template(template_id: int, db: Session = Depends(get_db),
 async def update_workflow_template(template_id: int, data: WorkflowTemplateUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("approval_template:manage"))):
     """更新审批模板（仅管理员，approval_type 锁定不可改）"""
     engine = WorkflowEngine(db)
+    template = engine.get_template_by_id(template_id)
+    previous = None
+    if template:
+        previous = {
+            "current_stage": template.current_stage,
+            "target_stage": template.target_stage,
+            "mode": template.mode,
+            "chain": template.chain,
+            "enabled": template.enabled,
+            "remark": template.remark,
+        }
+    update_data = data.model_dump(exclude_unset=True)
     try:
-        t = engine.update_template(template_id, data.model_dump(exclude_unset=True))
+        t = engine.update_template(template_id, update_data)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    _audit_update(
+        db,
+        current_user,
+        "approval_template",
+        str(t.id),
+        previous or {},
+        update_data,
+    )
+    db.commit()
     return _serialize_template(t)
 
 

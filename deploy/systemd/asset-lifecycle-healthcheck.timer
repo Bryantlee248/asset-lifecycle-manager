@@ -1,0 +1,10 @@
+[Unit]
+Description=Run IT Asset Lifecycle local health check every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Unit=asset-lifecycle-healthcheck.service
+
+[Install]
+WantedBy=timers.target

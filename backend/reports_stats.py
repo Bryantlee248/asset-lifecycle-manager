@@ -33,7 +33,7 @@ from constants import (
     ACTIVE_STAGES,
     AGGREGATE_FIELD_WHITELIST,
 )
-from config_cache import get_category_code
+from config_cache import get_category_code, build_aggregate_fields_cache, is_valid_aggregate_field, get_enabled_aggregate_fields
 from auth import require_permission
 
 
@@ -228,8 +228,16 @@ def get_warranty_buckets(db: Session, stage: Optional[str] = None) -> dict:
 
 # ============ 6. 自定义字段聚合 ============
 def get_aggregate(db: Session, field: str, metric: str = "count", stage: Optional[str] = None) -> dict:
-    """对白名单字段 GROUP BY，返回各取值的计数与原值汇总；非法字段/指标返回 400；S-12 联动支持 stage 过滤"""
-    if field not in AGGREGATE_FIELD_WHITELIST:
+    """对白名单字段 GROUP BY，返回各取值的计数与原值汇总；非法字段/指标返回 400；S-12 联动支持 stage 过滤。
+
+    单一集成入口：读 aggregate_whitelist 表（经进程内缓存），仅允许启用中的字段；
+    表空（极端未 seed）时回退常量 AGGREGATE_FIELD_WHITELIST（design §2 保留回退）。
+    """
+    valid = is_valid_aggregate_field(field)
+    if valid is None:
+        build_aggregate_fields_cache(db)
+        valid = is_valid_aggregate_field(field)
+    if not valid:
         raise HTTPException(status_code=400, detail=f"非法聚合字段: {field}（不在白名单内）")
     if metric not in ("count", "original_value"):
         raise HTTPException(status_code=400, detail=f"非法聚合指标: {metric}（仅支持 count/original_value）")
@@ -443,6 +451,21 @@ def api_aggregate(
     if not field:
         raise HTTPException(status_code=400, detail="缺少聚合字段 field 参数")
     return get_aggregate(db, field, metric, stage)
+
+
+@stats_router.get("/aggregate-fields")
+def api_aggregate_fields(db: Session = Depends(get_db), _: object = Depends(require_permission("reports:view"))):
+    """T-11：返回当前 enabled=true 的聚合维度 [{value,label}]，供统计页下拉实时同步。
+
+    与 config:manage 分离，复用 reports:view 只读权限；极端未 seed 时回退常量。"""
+    fields = get_enabled_aggregate_fields()
+    if fields is None:
+        build_aggregate_fields_cache(db)
+        fields = get_enabled_aggregate_fields() or []
+    if not fields:
+        # 极端回退：seed 未跑时退化为常量，保证统计页不白屏（design §3.6）
+        fields = [{"value": f, "label": f} for f in AGGREGATE_FIELD_WHITELIST]
+    return fields
 
 
 @stats_router.get("/stage-trend")
