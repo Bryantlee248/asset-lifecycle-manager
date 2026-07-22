@@ -3,22 +3,43 @@
 系统配置模块 P2 全量回归测试（QA: 严过关 / software-qa-engineer）
 =============================================================
 测试对象：校验规则开关 (validation_rule_switch) + 聚合维度白名单 (aggregate_whitelist)
-后端：FastAPI @ http://127.0.0.1:8000（生产模式，PID ~24060）
+后端：显式指定的本地隔离 FastAPI 实例
 覆盖范围：A seed 正确性 / B 开关影响仪表盘 / C 聚合白名单 / D 白名单 CRUD /
          E reset 语义 / F RBAC / G 导入导出 / H 错误码 / I 清理与静态检查
-运行方式：python qa-test-config-module-P2.py
+运行方式：先运行 python qa-test-config-module-P2.py --help，并显式传入本地地址、口令环境变量和 --destructive。
 依赖：仅标准库 urllib（curl 不可用）；Python 3.13
 幂等性：脚本开头 pre-reset、结尾 final-reset，可重复运行。
 """
 
+import argparse
+import os
 import urllib.request
 import urllib.error
+import urllib.parse
 import json
 import sys
 
-BASE = "http://127.0.0.1:8000"
+BASE = None
 ADMIN_USER = "admin"
-ADMIN_PASS = "Admin@2026!Secure"
+ADMIN_PASS = os.environ.get("QA_ADMIN_PASSWORD")
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="P2 configuration regression for a local isolated instance")
+    parser.add_argument("--base-url", required=True, help="local test service URL")
+    parser.add_argument("--destructive", action="store_true", help="allow validation-rule changes")
+    args = parser.parse_args()
+    if urllib.parse.urlparse(args.base_url).hostname not in {"127.0.0.1", "localhost"}:
+        parser.error("only a local isolated service is allowed")
+    if not args.destructive:
+        parser.error("this script changes configuration; pass --destructive")
+    if not ADMIN_PASS:
+        parser.error("missing QA_ADMIN_PASSWORD")
+    return args
+
+
+ARGS = parse_arguments()
+BASE = ARGS.base_url.rstrip("/")
 
 # ---- 期望的精确出厂态（与 DESIGN §5.1 / §5.2 一一对应）----
 EXPECTED_RULE_KEYS = [

@@ -6,17 +6,37 @@ QA 工程师：严过关（software-qa-engineer）
       D.引用/出口保护 E.RBAC F.导入/导出 G.错误码 H.清理与幂等
 
 运行方式：
-  python qa-test-config-module-P1.py
-（后端须以生产模式运行于 http://127.0.0.1:8000，管理员 admin/Admin@2026!Secure）
+  先运行 python qa-test-config-module-P1.py --help，并显式传入本地地址、口令环境变量和 --destructive。
+（仅可针对显式指定的本地隔离实例运行，管理员密码由环境变量提供）
 """
+import argparse
 import json
+import os
 import urllib.request
 import urllib.error
 import urllib.parse
 
-BASE = "http://127.0.0.1:8000"
-ADMIN = ("admin", "Admin@2026!Secure")
-VIEWER = ("test_viewer", "Test@2026!")
+BASE = None
+ADMIN = ("admin", os.environ.get("QA_ADMIN_PASSWORD"))
+VIEWER = ("test_viewer", os.environ.get("QA_VIEWER_PASSWORD"))
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="P1 configuration regression for a local isolated instance")
+    parser.add_argument("--base-url", required=True, help="local test service URL")
+    parser.add_argument("--destructive", action="store_true", help="allow stage-rule changes")
+    args = parser.parse_args()
+    if urllib.parse.urlparse(args.base_url).hostname not in {"127.0.0.1", "localhost"}:
+        parser.error("only a local isolated service is allowed")
+    if not args.destructive:
+        parser.error("this script changes configuration; pass --destructive")
+    if not all(ADMIN[1:]) or not all(VIEWER[1:]):
+        parser.error("missing QA_ADMIN_PASSWORD or QA_VIEWER_PASSWORD")
+    return args
+
+
+ARGS = parse_arguments()
+BASE = ARGS.base_url.rstrip("/")
 
 # ---- 设计文档 §5 精确 11 行 seed 矩阵（期望基准） ----
 # (from_stage, to_stage, allowed, require_retirement, require_data_cleared,

@@ -104,12 +104,16 @@ def test_first_production_bootstrap_requires_an_admin_password(
 
 
 def test_release_files_do_not_publish_a_default_admin_password():
-    forbidden_values = ("Admin@2026!Secure", "admin123")
+    forbidden_values = ("Admin@2026!Secure", "Test@2026!", "admin123")
     files = [
         PROJECT_ROOT / ".env.example",
         PROJECT_ROOT / "start.py",
         PROJECT_ROOT / "frontend" / "index.html",
         PROJECT_ROOT / "backend" / "auth.py",
+        PROJECT_ROOT / "README.md",
+        PROJECT_ROOT / "qa-test-config-module-P0.py",
+        PROJECT_ROOT / "qa-test-config-module-P1.py",
+        PROJECT_ROOT / "qa-test-config-module-P2.py",
     ]
 
     assert all(
@@ -117,6 +121,21 @@ def test_release_files_do_not_publish_a_default_admin_password():
         for forbidden in forbidden_values
         for path in files
     )
+
+
+def test_destructive_qa_scripts_require_an_explicit_local_target():
+    scripts = [
+        PROJECT_ROOT / "qa-test-config-module-P0.py",
+        PROJECT_ROOT / "qa-test-config-module-P1.py",
+        PROJECT_ROOT / "qa-test-config-module-P2.py",
+    ]
+
+    for script in scripts:
+        content = script.read_text(encoding="utf-8")
+        assert "--base-url" in content
+        assert "--destructive" in content
+        assert "QA_ADMIN_PASSWORD" in content
+        assert 'BASE = "http://127.0.0.1:8000"' not in content
 
 
 def test_frontend_uses_the_modern_operations_console_system():
@@ -150,6 +169,66 @@ def test_frontend_uses_the_modern_operations_console_system():
     assert html.index("vue@3.5.13/dist/vue.global.prod.js") < html.index(
         "@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"
     )
+
+
+def test_frontend_groups_existing_tabs_into_the_five_operations_domains():
+    html = (PROJECT_ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+
+    required_domain_labels = (
+        "工作台",
+        "资产运营",
+        "协同中心",
+        "洞察报告",
+        "系统治理",
+    )
+    required_tab_literals = (
+        "currentTab==='dashboard'",
+        "currentTab==='assets'",
+        "currentTab==='approval'",
+        "currentTab==='reports'",
+        "currentTab==='config'",
+    )
+
+    assert all(label in html for label in required_domain_labels)
+    assert all(tab in html for tab in required_tab_literals)
+
+
+def test_mobile_nav_drawer_and_page_structure_contracts():
+    html = (PROJECT_ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+
+    # P1-1: the mobile navigation drawer must be fully wired in the template
+    assert '<button class="nav-toggle" @click="toggleNav"' in html
+    assert 'class="nav-backdrop" v-show="navOpen"' in html
+    assert '<nav class="sidebar" @click="navOpen = false">' in html
+    assert ":class=\"{ 'nav-open': navOpen }\"" in html
+    # the drawer can be closed both by tapping the backdrop and by selecting a menu item
+    assert html.count('@click="navOpen = false"') >= 2
+
+    # P1-2: the 11 modernized pages each expose a page-header carrying its title
+    expected_pages = (
+        ("assets", "资产台账"),
+        ("procurement", "采购管理"),
+        ("inbound", "入库管理"),
+        ("outbound", "出库管理"),
+        ("changes", "变更管理"),
+        ("faults", "故障与维修"),
+        ("warranties", "维保管理"),
+        ("retirements", "退役与报废"),
+        ("approvalNotify", "审批通知"),
+        ("users", "用户管理"),
+        ("roles", "角色与权限"),
+    )
+    for tab, title in expected_pages:
+        marker = f"currentTab==='{tab}'"
+        assert marker in html, f"missing tab marker for {tab}"
+        marker_idx = html.find(marker)
+        title_idx = html.find(f'page-title">{title}', marker_idx)
+        assert title_idx != -1, f"page {tab} is missing its page-title '{title}'"
+        assert title_idx > marker_idx, f"page-title for {tab} appears before its tab marker"
+
+    # empty state and user-visible error surface are present
+    assert 'empty-text="暂无数据"' in html
+    assert 'v-if="errorMsg"' in html
 
 
 def test_database_uses_the_configured_url(isolated_runtime):

@@ -9,6 +9,7 @@ ENV_FILE="/etc/asset-lifecycle/asset-lifecycle.env"
 ARCHIVE="/tmp/asset-lifecycle-manager.tgz"
 PUBLIC_URL="${PUBLIC_URL:-http://125.77.25.229:8081}"
 SOURCE_SHA="${SOURCE_SHA:-unknown}"
+SEED_SCENARIO_TEST_DATA="${SEED_SCENARIO_TEST_DATA:-false}"
 RELEASE_ID="$(date +%Y%m%d-%H%M%S)"
 RELEASE_BACKUP_DIR="${BACKUP_ROOT}/opt-release-${RELEASE_ID}"
 NEW_DIR="${APP_DIR}.new"
@@ -90,7 +91,7 @@ print(f'import_ok={main.app.title}')
 PY
 
 # 幂等追加场景化测试数据；发布前已有 SQLite 备份，脚本只创建缺失的 SIM 编号。
-if [ -f "$NEW_DIR/generate_scenario_test_data.py" ]; then
+if [ "$SEED_SCENARIO_TEST_DATA" = "true" ] && [ -f "$NEW_DIR/generate_scenario_test_data.py" ]; then
   runuser -u asset-lifecycle -- "$NEW_DIR/.venv/bin/python" "$NEW_DIR/generate_scenario_test_data.py"
 fi
 

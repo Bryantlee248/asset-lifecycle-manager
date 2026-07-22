@@ -21,13 +21,14 @@
   静态:             后端无 CATEGORY_CODE_MAP/CATEGORY_NAME_BY_CODE/category_code_map 残留；前端入口按权限显隐
 
 说明:
-  * 后端已在 127.0.0.1:8000 运行(生产模式)。本脚本只发请求、做断言，不改业务代码。
+  * 必须显式指定本地隔离服务和对应数据库；本脚本会创建和删除测试数据。
   * 测试产生的中间数据(临时枚举/分类/资产)均在 cleanup() 中清除，并以「还原检查」确认库态回到 17/63/10、零 orphan。
   * 网络层使用 requests(仓库既有 QA 脚本 qa-test-report-module-P2.py 同款依赖；curl 不可用，requests 为 Python 库，满足"非 curl"约束)。
 
-用法: python qa-test-config-module-P0.py
+用法: 先运行 python qa-test-config-module-P0.py --help，并显式传入本地地址、数据库路径、口令环境变量和 --destructive。
 """
 
+import argparse
 import os
 import sys
 import json
@@ -35,6 +36,7 @@ import sqlite3
 import random
 import string
 import glob
+from urllib.parse import urlparse
 
 try:
     import requests
@@ -48,17 +50,38 @@ except ImportError:
     print("[FATAL] openpyxl 未安装，请先 pip install openpyxl")
     sys.exit(2)
 
-BASE = "http://127.0.0.1:8000"
+BASE = None
 HERE = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(HERE, "asset_lifecycle.db")
 
 # 账号（4 角色均内置，config:manage 仅 admin / test_ops_manager 拥有）
 ACCOUNTS = {
-    "admin": "Admin@2026!Secure",
-    "test_ops_manager": "Test@2026!",
-    "test_ops_engineer": "Test@2026!",
-    "test_viewer": "Test@2026!",
+    "admin": os.environ.get("QA_ADMIN_PASSWORD"),
+    "test_ops_manager": os.environ.get("QA_OPS_MANAGER_PASSWORD"),
+    "test_ops_engineer": os.environ.get("QA_OPS_ENGINEER_PASSWORD"),
+    "test_viewer": os.environ.get("QA_VIEWER_PASSWORD"),
 }
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="P0 configuration regression for a local isolated instance")
+    parser.add_argument("--base-url", required=True, help="local test service URL")
+    parser.add_argument("--database", required=True, help="matching SQLite database path")
+    parser.add_argument("--destructive", action="store_true", help="allow test data changes")
+    args = parser.parse_args()
+    if urlparse(args.base_url).hostname not in {"127.0.0.1", "localhost"}:
+        parser.error("only a local isolated service is allowed")
+    if not args.destructive:
+        parser.error("this script changes test data; pass --destructive")
+    missing = [name for name, value in ACCOUNTS.items() if not value]
+    if missing:
+        parser.error("missing password environment variables for: " + ", ".join(missing))
+    return args
+
+
+ARGS = parse_arguments()
+BASE = ARGS.base_url.rstrip("/")
+DB_PATH = os.path.abspath(ARGS.database)
 
 # 改造前(种子)下拉期望值 —— 硬编码断言(下拉零变更)
 EXPECTED_DROPDOWN = {

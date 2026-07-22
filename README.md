@@ -103,9 +103,10 @@ python start.py --production --host 0.0.0.0 --port 8000
 - 前端：http://127.0.0.1:8000 （`frontend/index.html` 由后端托管）
 - API 文档：http://127.0.0.1:8000/docs
 
-### 默认管理员
+### 首次管理员
 - 账号：`admin`
-- 密码：`Admin@2026!Secure`（可用环境变量 `DEFAULT_ADMIN_PASSWORD` 覆盖）
+- 在首次启动前设置 `DEFAULT_ADMIN_PASSWORD=replace-with-a-strong-password`。
+- 管理员创建完成后，应从部署环境中移除该变量。
 
 > ⚠️ 公网 IP 的 HTTP 仅用于短期验证，正式对外使用前必须配置 HTTPS。
 
@@ -117,10 +118,8 @@ python start.py --production --host 0.0.0.0 --port 8000
 # pytest 套件（生产 MVP / 部署模板）
 python -m pytest -q
 
-# 配置模块全量回归（含 P0/P1/P2）
-python qa-test-config-module-P0.py
-python qa-test-config-module-P1.py
-python qa-test-config-module-P2.py
+# 配置模块全量回归（仅限本地隔离实例；脚本会修改测试数据）
+# 先阅读参数说明：python qa-test-config-module-P0.py --help
 
 # 冒烟脚本
 python smoke_p0.py

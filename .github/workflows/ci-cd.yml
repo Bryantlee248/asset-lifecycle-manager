@@ -3,7 +3,7 @@ name: ci-cd
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 concurrency:
@@ -42,11 +42,12 @@ jobs:
           import main
           print(f'import_ok={main.app.title}')
           PY
+          python -m pytest -q --disable-warnings
 
   deploy:
     needs: ci
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Check out code
         uses: actions/checkout@v4

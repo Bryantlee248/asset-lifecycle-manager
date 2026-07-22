@@ -60,3 +60,29 @@ def test_healthcheck_timer_runs_a_local_check_every_minute():
     assert "127.0.0.1:8000/api/health" in service
     assert "--minimum-free-mib 1024" in service
     assert "OnUnitActiveSec=1min" in timer
+
+
+def test_ci_runs_the_complete_pytest_release_gate():
+    workflow = (PROJECT_ROOT / ".github/workflows/ci-cd.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "python -m pytest -q --disable-warnings" in workflow
+
+
+def test_ci_deploys_only_from_main():
+    workflow = (PROJECT_ROOT / ".github/workflows/ci-cd.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "      - main" in workflow
+    assert "if: github.ref == 'refs/heads/main'" in workflow
+
+
+def test_release_script_requires_explicit_scenario_data_opt_in():
+    script = (PROJECT_ROOT / "deploy/github-actions-deploy.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'SEED_SCENARIO_TEST_DATA="${SEED_SCENARIO_TEST_DATA:-false}"' in script
+    assert 'if [ "$SEED_SCENARIO_TEST_DATA" = "true" ] && [ -f "$NEW_DIR/generate_scenario_test_data.py" ]; then' in script

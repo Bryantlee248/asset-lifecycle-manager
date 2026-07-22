@@ -109,7 +109,56 @@
         .notification-badge { position: absolute; top: -4px; right: -4px; background: #E34D59; color: #fff; font-size: 10px; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
         .notification-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #E34D59; margin-right: 6px; }
 
-        @media (max-width: 1200px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
+        .el-table { --el-table-border-color: var(--line); --el-table-header-bg-color: #f8fafc; --el-table-row-hover-bg-color: #f4f8ff; color: var(--text); }
+        .el-table th.el-table__cell { color: #475467; font-size: 12px; font-weight: 650; }
+        .el-table .cell { font-size: 13px; line-height: 20px; }
+        .el-button--primary { --el-button-bg-color: var(--accent); --el-button-border-color: var(--accent); --el-button-hover-bg-color: #1d4ed8; --el-button-hover-border-color: #1d4ed8; }
+        .el-tabs__header { margin: 0 0 16px; }
+        .el-tabs__item { height: 38px; color: var(--muted); font-weight: 500; }
+        .el-tabs__item.is-active { color: var(--accent); font-weight: 650; }
+        .el-tabs__active-bar { height: 2px; background: var(--accent); }
+        .el-tag, .stage-tag, .approval-status-tag { border-radius: 4px; font-weight: 600; }
+        .el-dialog, .el-drawer { border-radius: 6px; }
+        .el-dialog__header, .el-drawer__header { margin: 0; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+        .el-dialog__body, .el-drawer__body { padding: 20px; }
+        .el-dialog__footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--line); }
+        .el-form-item__label { color: #475467; font-weight: 600; }
+        @media (max-width: 1200px) { .stat-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 900px) {
+            .app-header { padding: 0 16px; }
+            .app-header .header-right > span:not(:last-child) { display: none; }
+            .nav-toggle { display: inline-flex; }
+            .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; width: 248px; max-width: 82vw; z-index: 1100; transform: translateX(-100%); transition: transform .2s ease; box-shadow: 2px 0 12px rgba(0,0,0,.18); }
+            .app-body.nav-open .sidebar { transform: translateX(0); }
+            .app-body.nav-open .nav-backdrop { display: block; }
+            .main-content { margin-left: 0; padding: 16px; }
+            .filter-bar { align-items: stretch; }
+            .filter-bar .el-input, .filter-bar .el-select { width: 100% !important; }
+        }
+        @media (max-width: 768px) { .page-header { flex-direction: column; align-items: stretch; } .page-header .page-actions { width: 100%; } }
+        @media (max-width: 640px) { .stat-cards { grid-template-columns: 1fr; } .main-content { padding: 12px; } .page-card { padding: 14px; } .el-dialog { width: calc(100vw - 24px) !important; } }
+        /* ===== 现代化共享原语（新增，不改动既有令牌/选择器） ===== */
+        .nav-toggle { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; margin-right: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 18px; }
+        .nav-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,35,.45); z-index: 1090; }
+        .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+        .page-header .page-title { font-size: 20px; font-weight: 700; color: var(--text); }
+        .page-header .page-subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+        .page-header .page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+        .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+        .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        .status-pill.normal { background: var(--healthy-soft); color: var(--healthy); }
+        .status-pill.pending { background: var(--warning-soft); color: var(--warning); }
+        .status-pill.risk { background: var(--critical-soft); color: var(--critical); }
+        .status-pill.done { background: #eef2ff; color: var(--accent); }
+        .empty-state { padding: 48px 16px; text-align: center; color: var(--muted); }
+        .empty-state .empty-icon { font-size: 40px; opacity: .45; margin-bottom: 8px; }
+        .detail-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .detail-field { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+        .detail-field .k { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+        .detail-field .v { font-size: 14px; color: var(--text); font-weight: 600; }
+        .section-title { font-size: 15px; font-weight: 650; color: var(--text); margin: 8px 0 12px; padding-left: 8px; border-left: 3px solid var(--accent); }
+        .list-meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -138,6 +187,9 @@
     <template v-if="loggedIn">
     <!-- 顶部导航 -->
     <header class="app-header">
+        <button class="nav-toggle" @click="toggleNav" type="button" aria-label="打开导航菜单">
+            <el-icon><Menu /></el-icon>
+        </button>
         <h1>IT资产全生命周期管理系统</h1>
         <div class="header-right">
             <span>长乐东南数据中心</span>
@@ -157,87 +209,92 @@
         </div>
     </header>
 
-    <div class="app-body">
+    <div class="app-body" :class="{ 'nav-open': navOpen }">
         <!-- 左侧菜单 -->
-        <nav class="sidebar">
+        <nav class="sidebar" @click="navOpen = false">
             <div class="menu-group">
-                <div class="menu-group-title">概览</div>
+                <div class="menu-group-title">工作台</div>
                 <div class="menu-item" :class="{active: currentTab==='dashboard'}" @click="currentTab='dashboard'">
-                    <span class="icon">📊</span>数据总览
+                    <span class="icon"><el-icon><Odometer /></el-icon></span>运营总览
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='validation'}" @click="currentTab='validation'">
-                    <span class="icon">🔍</span>校验仪表盘
+                    <span class="icon"><el-icon><CircleCheck /></el-icon></span>校验与风险
                 </div>
             </div>
             <div class="menu-group">
-                <div class="menu-group-title">数据交换</div>
-                <div class="menu-item" :class="{active: currentTab==='importExport'}" @click="currentTab='importExport'">
-                    <span class="icon">📤</span>导入导出
-                </div>
-            </div>
-            <div class="menu-group">
-                <div class="menu-group-title">报表统计</div>
-                <div class="menu-item" :class="{active: currentTab==='reports'}" @click="currentTab='reports'">
-                    <span class="icon">📈</span>报表统计
-                </div>
-                <div class="menu-item" v-if="hasPerm('reports:view')" :class="{active: currentTab==='stats'}" @click="currentTab='stats'">
-                    <span class="icon">📊</span>统计看板
-                </div>
-            </div>
-            <div class="menu-group">
-                <div class="menu-group-title">资产管理</div>
+                <div class="menu-group-title">资产运营</div>
                 <div class="menu-item" :class="{active: currentTab==='assets'}" @click="currentTab='assets'">
-                    <span class="icon">🖥️</span>资产台账
+                    <span class="icon"><el-icon><Box /></el-icon></span>资产台账
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='procurement'}" @click="currentTab='procurement'">
-                    <span class="icon">📦</span>采购入库
+                    <span class="icon"><el-icon><ShoppingCart /></el-icon></span>采购管理
                 </div>
                 <div class="menu-item" v-if="hasPerm('inbound:view')" :class="{active: currentTab==='inbound'}" @click="currentTab='inbound'">
-                    <span class="icon">📥</span>资产移入
+                    <span class="icon"><el-icon><Download /></el-icon></span>入库管理
                 </div>
                 <div class="menu-item" v-if="hasPerm('outbound:view')" :class="{active: currentTab==='outbound'}" @click="currentTab='outbound'">
-                    <span class="icon">📤</span>资产移出
+                    <span class="icon"><el-icon><Upload /></el-icon></span>出库管理
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='changes'}" @click="currentTab='changes'">
-                    <span class="icon">🔄</span>变更迁移
+                    <span class="icon"><el-icon><Switch /></el-icon></span>变更管理
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='faults'}" @click="currentTab='faults'">
-                    <span class="icon">⚠️</span>故障维修
+                    <span class="icon"><el-icon><WarningFilled /></el-icon></span>故障与维修
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='warranties'}" @click="currentTab='warranties'">
-                    <span class="icon">🛡️</span>维保续保
+                    <span class="icon"><el-icon><Service /></el-icon></span>维保管理
                 </div>
                 <div class="menu-item" :class="{active: currentTab==='retirements'}" @click="currentTab='retirements'">
-                    <span class="icon">🗑️</span>退役报废
+                    <span class="icon"><el-icon><DeleteFilled /></el-icon></span>退役与报废
                 </div>
             </div>
-            <div class="menu-group" v-if="hasPerm('approval:view')">
-                <div class="menu-group-title">审批工作流</div>
+            <div class="menu-group">
+                <div class="menu-group-title">协同中心</div>
                 <div class="menu-item" v-if="hasPerm('approval:view')" :class="{active: currentTab==='approval'}" @click="currentTab='approval'">
-                    <span class="icon">📋</span>审批中心
+                    <span class="icon"><el-icon><DocumentChecked /></el-icon></span>审批中心
                 </div>
                 <div class="menu-item" v-if="hasPerm('approval:view')" :class="{active: currentTab==='approvalNotify'}" @click="currentTab='approvalNotify'; loadApprovalNotifications()">
-                    <span class="icon" style="position:relative;">🔔<span v-if="approvalUnread>0" class="notification-badge">{{ approvalUnread }}</span></span>审批通知
+                    <span class="icon" style="position:relative;"><el-icon><Bell /></el-icon><span v-if="approvalUnread>0" class="notification-badge">{{ approvalUnread }}</span></span>审批通知
+                </div>
+                <div class="menu-item" :class="{active: currentTab==='importExport'}" @click="currentTab='importExport'">
+                    <span class="icon"><el-icon><Files /></el-icon></span>导入与导出
+                </div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">洞察报告</div>
+                <div class="menu-item" :class="{active: currentTab==='reports'}" @click="currentTab='reports'">
+                    <span class="icon"><el-icon><DataAnalysis /></el-icon></span>运营报表
+                </div>
+                <div class="menu-item" v-if="hasPerm('reports:view')" :class="{active: currentTab==='stats'}" @click="currentTab='stats'">
+                    <span class="icon"><el-icon><TrendCharts /></el-icon></span>统计看板
                 </div>
             </div>
             <div class="menu-group" v-if="hasAnyPerm('users:view','roles:view','config:manage')">
-                <div class="menu-group-title">系统管理</div>
+                <div class="menu-group-title">系统治理</div>
                 <div class="menu-item" v-if="hasPerm('users:view')" :class="{active: currentTab==='users'}" @click="currentTab='users'">
-                    <span class="icon">👥</span>用户管理
+                    <span class="icon"><el-icon><User /></el-icon></span>用户管理
                 </div>
                 <div class="menu-item" v-if="hasPerm('roles:view')" :class="{active: currentTab==='roles'}" @click="currentTab='roles'">
-                    <span class="icon">🔑</span>角色管理
+                    <span class="icon"><el-icon><Avatar /></el-icon></span>角色与权限
                 </div>
                 <div class="menu-item" v-if="hasPerm('config:manage')" :class="{active: currentTab==='config'}" @click="currentTab='config'; loadConfig()">
-                    <span class="icon">⚙️</span>系统配置
+                    <span class="icon"><el-icon><Setting /></el-icon></span>配置中心
                 </div>
             </div>
         </nav>
+        <div class="nav-backdrop" v-show="navOpen" @click="navOpen = false"></div>
 
         <!-- 主内容区 -->
         <main class="main-content">
+            <el-alert v-if="errorMsg" type="error" :closable="true" show-icon :title="errorMsg" @close="errorMsg = ''" style="margin-bottom:16px;"></el-alert>
             <!-- ========== 数据总览 ========== -->
             <template v-if="currentTab==='dashboard'">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">运营总览</div>
+                        <div class="page-subtitle">待办、风险与关键状态总览</div>
+                    </div>
+                </div>
                 <div class="stat-cards">
                     <div class="stat-card">
                         <div class="label">资产总数</div>
@@ -287,6 +344,12 @@
 
             <!-- ========== 校验仪表盘 ========== -->
             <template v-if="currentTab==='validation'">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">校验看板</div>
+                        <div class="page-subtitle">资产数据质量实时检查与问题定位</div>
+                    </div>
+                </div>
                 <div class="stat-cards" style="grid-template-columns:repeat(3,1fr);">
                     <div class="stat-card">
                         <div class="label">资产总数</div>
@@ -321,7 +384,13 @@
 
             <!-- ========== 资产台账 ========== -->
             <template v-if="currentTab==='assets'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">资产台账</div>
+                        <div class="page-subtitle">统一管理 IT 资产全生命周期主数据，支持检索、筛选与 CRUD</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">资产台账主索引</div>
                         <el-button type="primary" @click="openAssetForm(null)">新增资产</el-button>
@@ -339,7 +408,7 @@
                         </el-select>
                         <el-button @click="loadAssets">查询</el-button>
                     </div>
-                    <el-table :data="assetList" stripe border style="width:100%;" @row-click="showAssetDetail" highlight-current-row>
+                    <el-table :data="assetList" stripe border style="width:100%;" @row-click="showAssetDetail" highlight-current-row empty-text="暂无数据">
                         <el-table-column prop="asset_code" label="资产编号" width="150" fixed></el-table-column>
                         <el-table-column prop="asset_category" label="分类" width="90"></el-table-column>
                         <el-table-column prop="device_name" label="设备名称" width="120"></el-table-column>
@@ -376,7 +445,13 @@
 
             <!-- ========== 采购入库 ========== -->
             <template v-if="currentTab==='procurement'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">采购管理</div>
+                        <div class="page-subtitle">记录采购到货、验收与上架信息，关联审批流程</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">采购入库记录</div>
                         <el-button type="primary" @click="openForm('procurement', null)">新增记录</el-button>
@@ -385,7 +460,7 @@
                         <el-input v-model="procFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadProcurements"></el-input>
                         <el-button @click="loadProcurements">查询</el-button>
                     </div>
-                    <el-table :data="procList" stripe border style="width:100%;">
+                    <el-table :data="procList" stripe border style="width:100%;" empty-text="暂无数据">
                         <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
                         <el-table-column prop="purchase_order" label="采购单号" width="130"></el-table-column>
                         <el-table-column prop="contract_no" label="合同号" width="130"></el-table-column>
@@ -412,7 +487,13 @@
 
             <!-- ========== 变更迁移 ========== -->
             <template v-if="currentTab==='changes'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">变更管理</div>
+                        <div class="page-subtitle">记录设备变更迁移工单及审批信息</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">变更迁移记录</div>
                         <el-button type="primary" @click="openForm('change', null)">新增记录</el-button>
@@ -421,7 +502,7 @@
                         <el-input v-model="changeFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadChanges"></el-input>
                         <el-button @click="loadChanges">查询</el-button>
                     </div>
-                    <el-table :data="changeList" stripe border style="width:100%;">
+                    <el-table :data="changeList" stripe border style="width:100%;" empty-text="暂无数据">
                         <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
                         <el-table-column prop="work_order_no" label="工单编号" width="130"></el-table-column>
                         <el-table-column prop="change_type" label="变更类型" width="100"></el-table-column>
@@ -446,7 +527,13 @@
 
             <!-- ========== 故障维修 ========== -->
             <template v-if="currentTab==='faults'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">故障与维修</div>
+                        <div class="page-subtitle">跟踪故障等级、维修过程与恢复，关联阶段门禁</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">故障维修记录</div>
                         <el-button type="primary" @click="openForm('fault', null)">新增记录</el-button>
@@ -455,7 +542,7 @@
                         <el-input v-model="faultFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadFaults"></el-input>
                         <el-button @click="loadFaults">查询</el-button>
                     </div>
-                    <el-table :data="faultList" stripe border style="width:100%;" :row-class-name="faultRowClass">
+                    <el-table :data="faultList" stripe border style="width:100%;" :row-class-name="faultRowClass" empty-text="暂无数据">
                         <el-table-column prop="fault_no" label="故障单号" width="130"></el-table-column>
                         <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
                         <el-table-column label="等级" width="80">
@@ -488,7 +575,13 @@
 
             <!-- ========== 维保续保 ========== -->
             <template v-if="currentTab==='warranties'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">维保管理</div>
+                        <div class="page-subtitle">管理维保合同、到期提醒与续保决策</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">维保续保记录</div>
                         <el-button type="primary" @click="openForm('warranty', null)">新增记录</el-button>
@@ -497,7 +590,7 @@
                         <el-input v-model="warrantyFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadWarranties"></el-input>
                         <el-button @click="loadWarranties">查询</el-button>
                     </div>
-                    <el-table :data="warrantyList" stripe border style="width:100%;">
+                    <el-table :data="warrantyList" stripe border style="width:100%;" empty-text="暂无数据">
                         <el-table-column prop="warranty_no" label="维保单号" width="130"></el-table-column>
                         <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
                         <el-table-column prop="warranty_type" label="维保类型" width="100"></el-table-column>
@@ -525,7 +618,13 @@
 
             <!-- ========== 退役报废 ========== -->
             <template v-if="currentTab==='retirements'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">退役与报废</div>
+                        <div class="page-subtitle">记录报废处置，关联数据清除与移出审批</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">退役报废记录</div>
                         <el-button type="primary" @click="openForm('retirement', null)">新增记录</el-button>
@@ -534,7 +633,7 @@
                         <el-input v-model="retireFilter" placeholder="输入资产编号筛选" clearable style="width:200px;" @keyup.enter="loadRetirements"></el-input>
                         <el-button @click="loadRetirements">查询</el-button>
                     </div>
-                    <el-table :data="retireList" stripe border style="width:100%;">
+                    <el-table :data="retireList" stripe border style="width:100%;" empty-text="暂无数据">
                         <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
                         <el-table-column prop="retire_reason" label="报废原因" min-width="160"></el-table-column>
                         <el-table-column prop="retire_category" label="报废类别" width="100"></el-table-column>
@@ -562,7 +661,13 @@
 
             <!-- ========== 资产移入 ========== -->
             <template v-if="currentTab==='inbound'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">入库管理</div>
+                        <div class="page-subtitle">资产移入验收，合格后自动生成资产台账并回填编号</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">资产移入记录</div>
                         <el-button type="primary" v-if="hasPerm('inbound:create')" @click="openInboundForm(null)">新增记录</el-button>
@@ -574,7 +679,7 @@
                         </el-select>
                         <el-button @click="loadInbound">查询</el-button>
                     </div>
-                    <el-table :data="inboundList" stripe border style="width:100%;">
+                    <el-table :data="inboundList" stripe border style="width:100%;" empty-text="暂无数据">
                         <el-table-column prop="inbound_no" label="移入单号" width="130"></el-table-column>
                         <el-table-column prop="receive_type" label="接收类型" width="100"></el-table-column>
                         <el-table-column prop="asset_category" label="资产分类" width="90"></el-table-column>
@@ -606,7 +711,13 @@
 
             <!-- ========== 资产移出 ========== -->
             <template v-if="currentTab==='outbound'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">出库管理</div>
+                        <div class="page-subtitle">资产移出与报废处置，自动提交移出审批流</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">资产移出记录</div>
                         <el-button type="primary" v-if="hasPerm('outbound:create')" @click="openOutboundForm(null)">新增记录</el-button>
@@ -618,7 +729,7 @@
                         </el-select>
                         <el-button @click="loadOutbound">查询</el-button>
                     </div>
-                    <el-table :data="outboundList" stripe border style="width:100%;">
+                    <el-table :data="outboundList" stripe border style="width:100%;" empty-text="暂无数据">
                         <el-table-column prop="outbound_no" label="移出单号" width="130"></el-table-column>
                         <el-table-column prop="asset_code" label="资产编号" width="150"></el-table-column>
                         <el-table-column prop="outbound_category" label="移出类别" width="90">
@@ -646,7 +757,13 @@
 
             <!-- ========== 导入导出 ========== -->
             <template v-if="currentTab==='importExport'">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">导入导出</div>
+                        <div class="page-subtitle">批量导入台账数据，导出报表与明细</div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
                     <!-- 导入区 -->
                     <div class="page-card">
                         <div class="card-title" style="margin-bottom:16px;">批量导入</div>
@@ -731,6 +848,12 @@
 
             <!-- ========== 报表统计 ========== -->
             <template v-if="currentTab==='reports'">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">运营报表</div>
+                        <div class="page-subtitle">资产、故障、维保与退役综合统计报表</div>
+                    </div>
+                </div>
                 <div class="stat-cards">
                     <div class="stat-card">
                         <div class="label">资产总数</div>
@@ -884,6 +1007,12 @@
 
             <!-- ========== 统计看板（报表统计模块） ========== -->
             <template v-if="currentTab==='stats'">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">统计看板</div>
+                        <div class="page-subtitle">资产分布、状态、阶段与趋势可视化</div>
+                    </div>
+                </div>
                 <!-- KPI 卡片区 -->
                 <div class="stat-cards">
                     <div class="stat-card">
@@ -1068,7 +1197,13 @@
 
             <!-- ========== 用户管理 ========== -->
             <template v-if="currentTab==='users'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">用户管理</div>
+                        <div class="page-subtitle">管理系统用户、角色分配与账号状态</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">用户管理</div>
                         <el-button type="primary" @click="openUserForm(null)">新增用户</el-button>
@@ -1081,7 +1216,7 @@
                         </el-select>
                         <el-button @click="loadUsers">查询</el-button>
                     </div>
-                    <el-table :data="userList" stripe border style="width:100%;">
+                    <el-table :data="userList" stripe border style="width:100%;" empty-text="暂无数据">
                         <el-table-column prop="username" label="用户名" width="120"></el-table-column>
                         <el-table-column prop="real_name" label="姓名" width="100"></el-table-column>
                         <el-table-column prop="department" label="部门" width="120"></el-table-column>
@@ -1116,12 +1251,18 @@
 
             <!-- ========== 角色管理 ========== -->
             <template v-if="currentTab==='roles'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">角色与权限</div>
+                        <div class="page-subtitle">维护角色及其权限分组，系统内置角色受保护</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">角色管理</div>
                         <el-button type="primary" @click="openRoleForm(null)">新增角色</el-button>
                     </div>
-                    <el-table :data="roleList" stripe border style="width:100%;">
+                    <el-table :data="roleList" stripe border style="width:100%;" empty-text="暂无数据">
                         <el-table-column prop="name" label="角色名称" width="140"></el-table-column>
                         <el-table-column prop="code" label="角色编码" width="140"></el-table-column>
                         <el-table-column prop="description" label="描述" min-width="200"></el-table-column>
@@ -1146,6 +1287,12 @@
 
             <!-- ========== 系统配置（P0：字典/分类配置中心） ========== -->
             <template v-if="currentTab==='config'">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">系统配置</div>
+                        <div class="page-subtitle">字典枚举、资产分类与生命周期流转规则</div>
+                    </div>
+                </div>
                 <div class="page-card">
                     <el-tabs v-model="configSubTab" @tab-change="onConfigSubTabChange">
                         <el-tab-pane label="字典管理" name="dict">
@@ -1431,6 +1578,12 @@
 
             <!-- ========== 审批中心 ========== -->
             <template v-if="currentTab==='approval'">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">审批中心</div>
+                        <div class="page-subtitle">待我审批、我的申请与全部审批流程跟踪</div>
+                    </div>
+                </div>
                 <!-- 审批统计卡片 -->
                 <div class="stat-cards" style="grid-template-columns:repeat(4,1fr);">
                     <div class="stat-card">
@@ -1542,7 +1695,13 @@
 
             <!-- ========== 审批通知 ========== -->
             <template v-if="currentTab==='approvalNotify'">
-                <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">审批通知</div>
+                        <div class="page-subtitle">查看审批待办与通知，未读可点击标记</div>
+                    </div>
+                </div>
+                <div class="page-card" v-loading="pageLoading">
                     <div class="card-header">
                         <div class="card-title">审批通知</div>
                         <el-button type="primary" size="small" @click="doMarkAllNotifyRead">全部标记已读</el-button>
@@ -1717,7 +1876,7 @@
 
     <!-- ========== 审批详情对话框 ========== -->
     <el-dialog v-model="approvalDetailVisible" :title="'审批详情 - ' + (approvalDetail.request_no||'')" width="700px" destroy-on-close>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div class="detail-summary">
             <div><b>审批类型：</b>{{ approvalDetail.approval_type_name || '-' }}</div>
             <div><b>资产编号：</b>{{ approvalDetail.asset_code || '-' }}</div>
             <div><b>阶段变更：</b><span class="stage-tag" :class="'stage-'+approvalDetail.current_stage">{{ approvalDetail.current_stage }}</span> → <span class="stage-tag" :class="'stage-'+approvalDetail.target_stage">{{ approvalDetail.target_stage }}</span></div>
@@ -2122,7 +2281,7 @@
 
     <!-- ========== 资产详情/时间线对话框 ========== -->
     <el-dialog v-model="detailDialogVisible" :title="'资产详情 - ' + detailAsset.asset_code" width="700px">
-        <div style="margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;">
+        <div class="detail-summary">
             <div><b>分类：</b>{{ detailAsset.asset_category }}</div>
             <div><b>品牌/型号：</b>{{ detailAsset.brand }} {{ detailAsset.model }}</div>
             <div><b>SN：</b>{{ detailAsset.sn || '-' }}</div>
@@ -2141,6 +2300,7 @@
 </div>
 
 <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"></script>
 <script src="https://unpkg.com/element-plus@2.9.1/dist/index.full.min.js"></script>
 <script>
 const { createApp, ref, reactive, onMounted, computed, watch, nextTick } = Vue;
@@ -2149,6 +2309,9 @@ const app = createApp({
     setup() {
         const API = window.__API_BASE__ || '';
         const currentTab = ref('dashboard');
+        const navOpen = ref(false);
+        const pageLoading = ref(false);
+        const errorMsg = ref('');
         const currentTime = ref(new Date().toLocaleString('zh-CN'));
         setInterval(() => { currentTime.value = new Date().toLocaleString('zh-CN'); }, 1000);
         const ElMessage = ElementPlus.ElMessage;
@@ -2167,6 +2330,7 @@ const app = createApp({
         const myPermissions = computed(() => currentUser.value.permissions || []);
         function hasPerm(perm) { return myPermissions.value.includes(perm) || (currentUser.value.roles||[]).some(r => r.code === 'admin'); }
         function hasAnyPerm(...perms) { return perms.some(p => hasPerm(p)); }
+        function toggleNav() { navOpen.value = !navOpen.value; }
 
         // 带Token的API请求
         async function api(url, opts = {}) {
@@ -2936,7 +3100,7 @@ const app = createApp({
                 if (procFilter.value) params.set('asset_code', procFilter.value);
                 const data = await api('/api/procurements?' + params);
                 procList.value = data.items || []; procTotal.value = data.total || 0;
-            } catch(e) { console.error('采购数据加载失败', e); }
+            } catch(e) { console.error('采购数据加载失败', e); errorMsg.value = '采购数据加载失败，请稍后重试'; }
         }
         async function loadChanges() {
             try {
@@ -2944,7 +3108,7 @@ const app = createApp({
                 if (changeFilter.value) params.set('asset_code', changeFilter.value);
                 const data = await api('/api/changes?' + params);
                 changeList.value = data.items || []; changeTotal.value = data.total || 0;
-            } catch(e) { console.error('变更数据加载失败', e); }
+            } catch(e) { console.error('变更数据加载失败', e); errorMsg.value = '变更数据加载失败，请稍后重试'; }
         }
         async function loadFaults() {
             try {
@@ -2952,7 +3116,7 @@ const app = createApp({
                 if (faultFilter.value) params.set('asset_code', faultFilter.value);
                 const data = await api('/api/faults?' + params);
                 faultList.value = data.items || []; faultTotal.value = data.total || 0;
-            } catch(e) { console.error('故障数据加载失败', e); }
+            } catch(e) { console.error('故障数据加载失败', e); errorMsg.value = '故障数据加载失败，请稍后重试'; }
         }
         async function loadWarranties() {
             try {
@@ -2960,7 +3124,7 @@ const app = createApp({
                 if (warrantyFilter.value) params.set('asset_code', warrantyFilter.value);
                 const data = await api('/api/warranties?' + params);
                 warrantyList.value = data.items || []; warrantyTotal.value = data.total || 0;
-            } catch(e) { console.error('维保数据加载失败', e); }
+            } catch(e) { console.error('维保数据加载失败', e); errorMsg.value = '维保数据加载失败，请稍后重试'; }
         }
         async function loadRetirements() {
             try {
@@ -2968,7 +3132,7 @@ const app = createApp({
                 if (retireFilter.value) params.set('asset_code', retireFilter.value);
                 const data = await api('/api/retirements?' + params);
                 retireList.value = data.items || []; retireTotal.value = data.total || 0;
-            } catch(e) { console.error('退役数据加载失败', e); }
+            } catch(e) { console.error('退役数据加载失败', e); errorMsg.value = '退役数据加载失败，请稍后重试'; }
         }
 
         // 资产移入/移出 CRUD
@@ -2979,7 +3143,7 @@ const app = createApp({
                 if (inboundFilter.receive_type) params.set('receive_type', inboundFilter.receive_type);
                 const data = await api('/api/asset-inbound?' + params);
                 inboundList.value = data.items || []; inboundTotal.value = data.total || 0;
-            } catch(e) { console.error('移入数据加载失败', e); }
+            } catch(e) { console.error('移入数据加载失败', e); errorMsg.value = '移入数据加载失败，请稍后重试'; }
         }
         async function loadOutbound() {
             try {
@@ -2988,7 +3152,7 @@ const app = createApp({
                 if (outboundFilter.category) params.set('outbound_category', outboundFilter.category);
                 const data = await api('/api/asset-outbound?' + params);
                 outboundList.value = data.items || []; outboundTotal.value = data.total || 0;
-            } catch(e) { console.error('移出数据加载失败', e); }
+            } catch(e) { console.error('移出数据加载失败', e); errorMsg.value = '移出数据加载失败，请稍后重试'; }
         }
         function openInboundForm(row) {
             inboundForm.value = row ? { ...row } : { receive_type: '', ownership: '自有', inspection_result: '' };
@@ -3560,7 +3724,7 @@ const app = createApp({
             try {
                 const data = await api('/api/roles');
                 allRoles.value = data.items || [];
-            } catch(e) { console.error('角色列表加载失败', e); }
+            } catch(e) { console.error('角色列表加载失败', e); errorMsg.value = '角色列表加载失败，请稍后重试'; }
         }
 
         function openUserForm(row) {
@@ -3898,7 +4062,7 @@ const app = createApp({
                 const data = await api(`/api/approval-notifications?page=${approvalNotifyPage.value}&page_size=20`);
                 approvalNotifyList.value = data.items || [];
                 approvalNotifyTotal.value = data.total || 0;
-            } catch(e) { console.error('通知列表加载失败', e); }
+            } catch(e) { console.error('通知列表加载失败', e); errorMsg.value = '通知列表加载失败，请稍后重试'; }
         }
 
         async function doMarkNotifyRead(id) {
@@ -3971,7 +4135,7 @@ const app = createApp({
         });
 
         return {
-            currentTab, currentTime, dropdowns, distinctValues, stats, validation,
+            currentTab, currentTime, navOpen, toggleNav, pageLoading, errorMsg, dropdowns, distinctValues, stats, validation,
             loggedIn, token, currentUser, loginForm, loginLoading,
             changePwdVisible, changePwdForm,
             hasPerm, hasAnyPerm, onUserMenu, doLogin, doLogout, doChangePwd,
@@ -4052,6 +4216,9 @@ const app = createApp({
     }
 });
 
+Object.entries(ElementPlusIconsVue).forEach(([name, component]) => {
+    app.component(name, component);
+});
 app.use(ElementPlus);
 app.mount('#app');
 </script>
