@@ -67,6 +67,7 @@ def test_ci_runs_the_complete_pytest_release_gate():
         encoding="utf-8"
     )
 
+    assert "python -m pip install pytest httpx" in workflow
     assert "python -m pytest -q --disable-warnings" in workflow
 
 
