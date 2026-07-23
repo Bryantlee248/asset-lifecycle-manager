@@ -80,7 +80,7 @@ def test_ci_deploys_only_from_main():
     assert "if: github.ref == 'refs/heads/main'" in workflow
 
 
-def test_ci_builds_frontend_v2_preview_before_packaging():
+def test_ci_builds_frontend_v2_production_before_packaging():
     workflow = (PROJECT_ROOT / ".github/workflows/ci-cd.yml").read_text(
         encoding="utf-8"
     )
@@ -91,8 +91,9 @@ def test_ci_builds_frontend_v2_preview_before_packaging():
     assert "npm ci" in workflow
     assert "npm run typecheck" in workflow
     assert "npm run test:unit" in workflow
-    assert "npm run build:preview" in workflow
-    assert workflow.index("npm run build:preview") < workflow.index("Package release")
+    assert "npm run build" in workflow
+    assert "npm run build:preview" not in workflow
+    assert workflow.index("npm run build") < workflow.index("Package release")
 
 
 def test_release_package_excludes_frontend_v2_build_dependencies():
@@ -106,7 +107,7 @@ def test_release_package_excludes_frontend_v2_build_dependencies():
     assert "--exclude='frontend-v2/*.timestamp-*.mjs'" in workflow
 
 
-def test_backend_serves_frontend_v2_dist_under_preview_only():
+def test_backend_serves_frontend_v2_dist_as_root_and_keeps_legacy_rollback():
     content = (PROJECT_ROOT / "backend/main.py").read_text(encoding="utf-8")
 
     assert 'frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")' in content
@@ -114,11 +115,10 @@ def test_backend_serves_frontend_v2_dist_under_preview_only():
         'frontend_v2_dist_dir = os.path.join(os.path.dirname(__file__), "..", "frontend-v2", "dist")'
         in content
     )
-    assert (
-        'app.mount("/preview", StaticFiles(directory=frontend_v2_dist_dir, html=True), name="frontend-v2-preview")'
-        in content
-    )
     assert 'app.mount("/static", StaticFiles(directory=frontend_dir), name="static")' in content
+    assert 'app.mount("/legacy", StaticFiles(directory=frontend_dir, html=True), name="frontend-legacy")' in content
+    assert 'app.mount("/assets", StaticFiles(directory=frontend_v2_assets_dir), name="frontend-v2-assets")' in content
+    assert 'index_path = os.path.join(frontend_v2_dist_dir, "index.html")' in content
 
 
 def test_release_script_requires_explicit_scenario_data_opt_in():

@@ -178,15 +178,20 @@ app.add_middleware(
 # 静态文件（前端）
 frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
 frontend_v2_dist_dir = os.path.join(os.path.dirname(__file__), "..", "frontend-v2", "dist")
+frontend_v2_assets_dir = os.path.join(frontend_v2_dist_dir, "assets")
 if os.path.exists(frontend_dir):
     app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
-if os.path.exists(frontend_v2_dist_dir):
-    app.mount("/preview", StaticFiles(directory=frontend_v2_dist_dir, html=True), name="frontend-v2-preview")
+    app.mount("/legacy", StaticFiles(directory=frontend_dir, html=True), name="frontend-legacy")
+if os.path.exists(frontend_v2_assets_dir):
+    app.mount("/assets", StaticFiles(directory=frontend_v2_assets_dir), name="frontend-v2-assets")
 
 
 # ============ 首页 ============
 @app.get("/")
 async def root():
+    index_path = os.path.join(frontend_v2_dist_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     index_path = os.path.join(frontend_dir, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
