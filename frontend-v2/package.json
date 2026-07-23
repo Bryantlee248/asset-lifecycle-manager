@@ -1,0 +1,38 @@
+{
+  "name": "asset-lifecycle-manager-frontend-v2",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "UI Modernization V2 (C2 design system) for the IT asset lifecycle manager — batch 1 (command center: dashboard + validation).",
+  "scripts": {
+    "dev": "vite",
+    "build": "cross-env VITE_BASE='/' vite build",
+    "build:preview": "cross-env VITE_BASE='/preview/' vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "echarts": "^6.1.0",
+    "lucide-vue-next": ">=0.400.0 <1.0.0",
+    "pinia": "^2.1.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.14.0",
+    "@vitejs/plugin-vue": "^5.1.0",
+    "@vue/test-utils": "^2.4.0",
+    "autoprefixer": "^10.4.0",
+    "cross-env": "^7.0.3",
+    "happy-dom": "^20.11.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.0",
+    "vue-tsc": "^2.0.0"
+  }
+}

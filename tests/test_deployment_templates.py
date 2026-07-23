@@ -80,6 +80,47 @@ def test_ci_deploys_only_from_main():
     assert "if: github.ref == 'refs/heads/main'" in workflow
 
 
+def test_ci_builds_frontend_v2_preview_before_packaging():
+    workflow = (PROJECT_ROOT / ".github/workflows/ci-cd.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "actions/setup-node@v4" in workflow
+    assert 'node-version: "20"' in workflow
+    assert "working-directory: frontend-v2" in workflow
+    assert "npm ci" in workflow
+    assert "npm run typecheck" in workflow
+    assert "npm run test:unit" in workflow
+    assert "npm run build:preview" in workflow
+    assert workflow.index("npm run build:preview") < workflow.index("Package release")
+
+
+def test_release_package_excludes_frontend_v2_build_dependencies():
+    workflow = (PROJECT_ROOT / ".github/workflows/ci-cd.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "--exclude='frontend-v2/node_modules'" in workflow
+    assert "--exclude='frontend-v2/test-results'" in workflow
+    assert "--exclude='frontend-v2/dist-preview'" in workflow
+    assert "--exclude='frontend-v2/*.timestamp-*.mjs'" in workflow
+
+
+def test_backend_serves_frontend_v2_dist_under_preview_only():
+    content = (PROJECT_ROOT / "backend/main.py").read_text(encoding="utf-8")
+
+    assert 'frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")' in content
+    assert (
+        'frontend_v2_dist_dir = os.path.join(os.path.dirname(__file__), "..", "frontend-v2", "dist")'
+        in content
+    )
+    assert (
+        'app.mount("/preview", StaticFiles(directory=frontend_v2_dist_dir, html=True), name="frontend-v2-preview")'
+        in content
+    )
+    assert 'app.mount("/static", StaticFiles(directory=frontend_dir), name="static")' in content
+
+
 def test_release_script_requires_explicit_scenario_data_opt_in():
     script = (PROJECT_ROOT / "deploy/github-actions-deploy.sh").read_text(
         encoding="utf-8"

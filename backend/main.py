@@ -177,8 +177,11 @@ app.add_middleware(
 
 # 静态文件（前端）
 frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
+frontend_v2_dist_dir = os.path.join(os.path.dirname(__file__), "..", "frontend-v2", "dist")
 if os.path.exists(frontend_dir):
     app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
+if os.path.exists(frontend_v2_dist_dir):
+    app.mount("/preview", StaticFiles(directory=frontend_v2_dist_dir, html=True), name="frontend-v2-preview")
 
 
 # ============ 首页 ============

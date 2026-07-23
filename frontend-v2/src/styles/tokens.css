@@ -1,0 +1,52 @@
+/* =========================================================================
+   C2 Design System — Tokens (visual authority: DESIGN-SPEC.md)
+   These CSS variables are the single source of truth for the UI Modernization
+   V2 look. tailwind.config.js references the same variable names so utilities
+   and raw CSS stay in sync. No viewport-scaled font sizes are used.
+   ========================================================================= */
+:root {
+  /* Canvas / surfaces */
+  --canvas: #f4f6f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+
+  /* Command bar (dark) */
+  --command-bar: #0e3a2e;
+  --command-bar-fg: #e6f4ec;
+
+  /* Brand (primary action) */
+  --brand: #157347;
+  --brand-hover: #115e39;
+
+  /* Link / info */
+  --link: #0052d9;
+
+  /* Risk semantic colors */
+  --risk-critical: #e34d59;
+  --risk-warning: #ed7b2f;
+  --risk-caution: #eab308;
+  --risk-ok: #2ba471;
+
+  /* Radius / elevation */
+  --radius: 8px;
+  --shadow: 0 2px 8px rgba(15, 58, 46, 0.08);
+
+  /* Typography */
+  --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+
+  /* 7-stage semantic mapping (reuses legacy .stage-* semantics) */
+  --stage-规划-bg: #e8f0fe;
+  --stage-规划-fg: #0052d9;
+  --stage-在途-bg: #fff7e8;
+  --stage-在途-fg: #ed7b2f;
+  --stage-上架-bg: #e8f8f0;
+  --stage-上架-fg: #2ba471;
+  --stage-运行-bg: #e8f8f0;
+  --stage-运行-fg: #008858;
+  --stage-维修-bg: #fde8e8;
+  --stage-维修-fg: #e34d59;
+  --stage-待报废-bg: #f3e8ff;
+  --stage-待报废-fg: #8b5cf6;
+  --stage-已报废-bg: #f0f0f0;
+  --stage-已报废-fg: #8c8e96;
+}

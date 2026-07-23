@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+dist-preview
+*.timestamp-*.mjs
+*.timestamp-*.cjs
+*.local
+.DS_Store
+coverage
+test-results
+playwright-report
+# E2E skip flag written by tests/e2e/global-setup.ts
+tests/e2e/.e2e-skip

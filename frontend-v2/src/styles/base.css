@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================================================
+   Base layer — font, canvas, reset (C2)
+   ========================================================================= */
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: #1f2933;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  /* Thin, unobtrusive scrollbars inside panels */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scroll-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 8px;
+  }
+}
+
+@layer components {
+  /* Generic panel surface used by cards, drawers, tables */
+  .c2-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  /* Primary (brand) button */
+  .c2-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+    white-space: nowrap;
+  }
+  .c2-btn:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+  .c2-btn-primary {
+    background: var(--brand);
+    color: #fff;
+  }
+  .c2-btn-primary:hover {
+    background: var(--brand-hover);
+  }
+  .c2-btn-ghost {
+    background: transparent;
+    border-color: var(--border);
+    color: #1f2933;
+  }
+  .c2-btn-ghost:hover {
+    background: var(--canvas);
+  }
+  .c2-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .c2-input {
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .c2-input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(21, 115, 71, 0.12);
+  }
+}
+
+/* App-wide transition timing (C2: 150–200ms) */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 150ms ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
