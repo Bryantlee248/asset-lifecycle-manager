@@ -128,3 +128,16 @@ def test_release_script_requires_explicit_scenario_data_opt_in():
 
     assert 'SEED_SCENARIO_TEST_DATA="${SEED_SCENARIO_TEST_DATA:-false}"' in script
     assert 'if [ "$SEED_SCENARIO_TEST_DATA" = "true" ] && [ -f "$NEW_DIR/generate_scenario_test_data.py" ]; then' in script
+
+
+def test_release_script_restarts_service_after_switching_release_directory():
+    script = (PROJECT_ROOT / "deploy/github-actions-deploy.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'mv "$NEW_DIR" "$APP_DIR"' in script
+    assert "systemctl enable asset-lifecycle" in script
+    assert "systemctl restart asset-lifecycle" in script
+    assert script.index('mv "$NEW_DIR" "$APP_DIR"') < script.index(
+        "systemctl restart asset-lifecycle"
+    )

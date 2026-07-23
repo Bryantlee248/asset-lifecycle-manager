@@ -132,7 +132,8 @@ if [ -d "$APP_DIR" ]; then
 fi
 
 mv "$NEW_DIR" "$APP_DIR"
-systemctl enable --now asset-lifecycle
+systemctl enable asset-lifecycle
+systemctl restart asset-lifecycle
 sleep 3
 
 if ! systemctl is-active --quiet asset-lifecycle; then
