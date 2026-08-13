@@ -40,6 +40,10 @@
 
 ---
 
+## 第二代重建项目
+
+本系统为**第一代生产系统**（Python FastAPI，轻量咨询交付，已上线运营）。新一代企业级平台（**多租户、元数据驱动、生命周期优先**）正在 [IT-assetlifecycle-rebuild](https://github.com/Bryantlee248/IT-assetlifecycle-rebuild) 仓库重建：Java 21 + Spring Boot 3 + PostgreSQL/Redis + Vue3，MVP-0~3 已完成，MVP-4/5 规划中。
+
 ## 技术栈
 
 | 层 | 技术 |
