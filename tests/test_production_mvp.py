@@ -111,9 +111,9 @@ def test_release_files_do_not_publish_a_default_admin_password():
         PROJECT_ROOT / "frontend" / "index.html",
         PROJECT_ROOT / "backend" / "auth.py",
         PROJECT_ROOT / "README.md",
-        PROJECT_ROOT / "qa-test-config-module-P0.py",
-        PROJECT_ROOT / "qa-test-config-module-P1.py",
-        PROJECT_ROOT / "qa-test-config-module-P2.py",
+        PROJECT_ROOT / "scripts" / "qa-test-config-module-P0.py",
+        PROJECT_ROOT / "scripts" / "qa-test-config-module-P1.py",
+        PROJECT_ROOT / "scripts" / "qa-test-config-module-P2.py",
     ]
 
     assert all(
@@ -125,9 +125,9 @@ def test_release_files_do_not_publish_a_default_admin_password():
 
 def test_destructive_qa_scripts_require_an_explicit_local_target():
     scripts = [
-        PROJECT_ROOT / "qa-test-config-module-P0.py",
-        PROJECT_ROOT / "qa-test-config-module-P1.py",
-        PROJECT_ROOT / "qa-test-config-module-P2.py",
+        PROJECT_ROOT / "scripts" / "qa-test-config-module-P0.py",
+        PROJECT_ROOT / "scripts" / "qa-test-config-module-P1.py",
+        PROJECT_ROOT / "scripts" / "qa-test-config-module-P2.py",
     ]
 
     for script in scripts:
