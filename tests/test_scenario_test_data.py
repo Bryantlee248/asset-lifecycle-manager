@@ -13,7 +13,7 @@ def test_scenario_seed_adds_fifty_assets_without_touching_existing_data(isolated
         SessionLocal,
         Warranty,
     )
-    from generate_scenario_test_data import SCENARIO_PREFIX, seed_scenario_test_data
+    from scripts.generate_scenario_test_data import SCENARIO_PREFIX, seed_scenario_test_data
 
     db = SessionLocal()
     try:

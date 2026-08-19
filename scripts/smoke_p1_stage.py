@@ -2,7 +2,7 @@
 import sys, os, json, urllib.request, urllib.error, urllib.parse
 
 BASE = "http://127.0.0.1:8000"
-BACKEND = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
+BACKEND = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend")
 sys.path.insert(0, BACKEND)
 
 import database as dbm

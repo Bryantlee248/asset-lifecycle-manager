@@ -25,7 +25,8 @@ import re
 import sys
 
 # ---- 将 backend 加入 sys.path，复用其 engine / 模型 / 常量 / 校验函数 ----
-HERE = os.path.dirname(os.path.abspath(__file__))
+# 脚本位于 scripts/，backend 在仓库根目录下
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BACKEND_DIR = os.path.join(HERE, "backend")
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)

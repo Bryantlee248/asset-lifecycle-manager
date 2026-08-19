@@ -17,8 +17,8 @@ import os
 import sys
 
 # ============ 将 backend 加入 sys.path ============
-# 脚本位于项目根目录，backend 模块在 backend/ 子目录下
-_BACKEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
+# 脚本位于 scripts/，backend 模块在仓库根目录的 backend/ 子目录下
+_BACKEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend")
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 

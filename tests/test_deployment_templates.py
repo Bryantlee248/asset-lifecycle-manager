@@ -127,7 +127,7 @@ def test_release_script_requires_explicit_scenario_data_opt_in():
     )
 
     assert 'SEED_SCENARIO_TEST_DATA="${SEED_SCENARIO_TEST_DATA:-false}"' in script
-    assert 'if [ "$SEED_SCENARIO_TEST_DATA" = "true" ] && [ -f "$NEW_DIR/generate_scenario_test_data.py" ]; then' in script
+    assert 'if [ "$SEED_SCENARIO_TEST_DATA" = "true" ] && [ -f "$NEW_DIR/scripts/generate_scenario_test_data.py" ]; then' in script
 
 
 def test_release_script_restarts_service_after_switching_release_directory():

@@ -51,7 +51,7 @@ except ImportError:
     sys.exit(2)
 
 BASE = None
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 仓库根目录
 DB_PATH = os.path.join(HERE, "asset_lifecycle.db")
 
 # 账号（4 角色均内置，config:manage 仅 admin / test_ops_manager 拥有）
