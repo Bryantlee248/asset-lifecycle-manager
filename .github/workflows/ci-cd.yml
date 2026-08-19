@@ -60,6 +60,7 @@ jobs:
           npm run build
 
   deploy:
+    environment: production
     needs: ci
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
