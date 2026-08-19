@@ -74,12 +74,13 @@ asset-lifecycle-manager/
 ├── frontend/
 │   └── index.html           # 单文件 SPA（含配置中心 5 个 Tab + 统计看板）
 ├── tests/                   # pytest 测试 + 功能测试
-├── scripts/                 # 运维脚本（备份/恢复/健康检查）
+├── scripts/                 # 运维与开发脚本（备份/恢复/健康检查/测试数据/冒烟/回归）
 ├── deploy/                  # 部署：systemd 单元 + GitHub Actions 部署脚本
-├── docs/                    # 需求/设计/规格文档
+├── docs/                    # 文档：docs/prd（模块 PRD）、docs/design（模块设计）、交接与 CI 说明
 ├── deliverables/            # 各模块交付文档与 QA 报告
 ├── .github/workflows/       # CI/CD (ci-cd.yml)
 ├── start.py                 # 一键启动（支持 --production/--host/--port）
+├── SPEC.md                  # 总规格
 ├── requirements.txt         # 依赖（含 bcrypt==4.0.1 锁定）
 └── pytest.ini               # 测试配置
 ```
@@ -123,12 +124,12 @@ python start.py --production --host 0.0.0.0 --port 8000
 python -m pytest -q
 
 # 配置模块全量回归（仅限本地隔离实例；脚本会修改测试数据）
-# 先阅读参数说明：python qa-test-config-module-P0.py --help
+# 先阅读参数说明：python scripts/qa-test-config-module-P0.py --help
 
-# 冒烟脚本
-python smoke_p0.py
-python smoke_p1_stage.py
-python smoke_p2.py
+# 冒烟脚本（在仓库根目录执行）
+python scripts/smoke_p0.py
+python scripts/smoke_p1_stage.py
+python scripts/smoke_p2.py
 ```
 
 ---
@@ -145,8 +146,8 @@ python smoke_p2.py
 ## 文档索引
 
 - 总规格：`SPEC.md`
-- 配置模块：`PRD_系统配置模块_P0/P1/P2.md`、`DESIGN_系统配置模块_P1/P2.md`
-- 报表统计模块：`PRD_报表统计模块.md` / `_P2.md`、`deliverables/design-report-module*.md`
+- 配置模块：`docs/prd/PRD_系统配置模块_P0/P1/P2.md`、`docs/design/DESIGN_系统配置模块_P1/P2.md`
+- 报表统计模块：`docs/prd/PRD_报表统计模块.md` / `docs/prd/PRD_报表统计模块_P2.md`、`deliverables/design-report-module*.md`
 - 审批工作流：`deliverables/*approval*`
 - 交付与 QA 报告：`deliverables/qa-*.md` / `deliverables/qa-test-*.json`
 
@@ -154,4 +155,4 @@ python smoke_p2.py
 
 ## 许可证
 
-本项目内部使用，许可证另行约定。
+[MIT](LICENSE) © 2026 Bryantlee248

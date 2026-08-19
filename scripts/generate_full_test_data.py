@@ -18,7 +18,8 @@ import sys
 from datetime import date, timedelta
 
 # ---- 将 backend 加入 sys.path，复用其 engine / SessionLocal / 模型 / 常量 ----
-BACKEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
+# 脚本位于 scripts/，backend 在仓库根目录下
+BACKEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend")
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
